@@ -1,0 +1,61 @@
+<svg width="400" height="340" viewBox="0 0 400 340" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arka plan kartı -->
+  <rect width="400" height="340" rx="12" fill="#141414" stroke="#222222" stroke-width="1" />
+  
+  <!-- Pencere Kontrolleri -->
+  <circle cx="20" cy="20" r="4" fill="#ff5f56" />
+  <circle cx="30" cy="20" r="4" fill="#ffbd2e" />
+  <circle cx="40" cy="20" r="4" fill="#27c93f" />
+  
+  <!-- Şarkı Sözleri Paneli -->
+  <rect x="37" y="35" width="326" height="180" rx="16" fill="rgba(255, 255, 255, 0.03)" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" />
+  
+  <!-- Şarkı Sözleri Başlık ve İçerik -->
+  <text x="53" y="60" font-family="'Inter', sans-serif" font-size="11" font-weight="600" fill="#1DB954">Lyrics</text>
+  <text x="53" y="90" font-family="'Inter', sans-serif" font-size="12" fill="rgba(255,255,255,0.3)">Angie, Angie</text>
+  <text x="53" y="115" font-family="'Inter', sans-serif" font-size="12" fill="rgba(255,255,255,0.3)">When will those dark clouds disappear?</text>
+  <text x="53" y="140" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">Angie, Angie</text>
+  <text x="53" y="165" font-family="'Inter', sans-serif" font-size="12" fill="rgba(255,255,255,0.3)">Where will it lead us from here?</text>
+  <text x="53" y="190" font-family="'Inter', sans-serif" font-size="12" fill="rgba(255,255,255,0.3)">With no loving in our souls</text>
+
+  <!-- Kaydırma Çubuğu İndikatörü -->
+  <rect x="352" y="70" width="3" height="100" rx="1.5" fill="rgba(255,255,255,0.05)" />
+  <rect x="352" y="110" width="3" height="30" rx="1.5" fill="rgba(255,255,255,0.2)" />
+  
+  <!-- Widget Konteyneri -->
+  <rect x="37" y="225" width="326" height="80" rx="16" fill="rgba(255, 255, 255, 0.05)" stroke="rgba(255, 255, 255, 0.08)" stroke-width="1" />
+  
+  <!-- Albüm Görseli -->
+  <rect x="53" y="237" width="56" height="56" rx="8" fill="url(#albumGrad2)" />
+  <circle cx="81" cy="265" r="8" fill="#141414" opacity="0.8" />
+  <circle cx="81" cy="265" r="3" fill="#1DB954" />
+  
+  <!-- Şarkı Bilgileri -->
+  <text x="120" y="258" font-family="'Inter', sans-serif" font-size="13" font-weight="600" fill="#FFFFFF">Angie</text>
+  <text x="120" y="275" font-family="'Inter', sans-serif" font-size="11" font-weight="500" fill="rgba(255, 255, 255, 0.5)">The Rolling Stones</text>
+  
+  <!-- Kontroller -->
+  <path d="M255 260 L255 270 L248 265 Z" fill="rgba(255,255,255,0.6)" />
+  <rect x="246" y="260" width="2" height="10" fill="rgba(255,255,255,0.6)" rx="0.5" />
+  
+  <circle cx="280" cy="265" r="14" fill="#1DB954" />
+  <rect x="275" y="260" width="3" height="10" fill="#FFFFFF" rx="1" />
+  <rect x="282" y="260" width="3" height="10" fill="#FFFFFF" rx="1" />
+  
+  <path d="M305 260 L305 270 L312 265 Z" fill="rgba(255,255,255,0.6)" />
+  <rect x="312" y="260" width="2" height="10" fill="rgba(255,255,255,0.6)" rx="0.5" />
+  
+  <!-- İlerleme Çubuğu -->
+  <rect x="53" y="298" width="294" height="2" rx="1" fill="rgba(255, 255, 255, 0.1)" />
+  <rect x="53" y="298" width="150" height="2" rx="1" fill="#1DB954" />
+  
+  <!-- Zaman Göstergesi -->
+  <text x="312" y="292" font-family="'Inter', sans-serif" font-size="8" fill="rgba(255, 255, 255, 0.4)">2:15 / 4:33</text>
+
+  <defs>
+    <linearGradient id="albumGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2b2b2b" />
+      <stop offset="100%" stop-color="#141414" />
+    </linearGradient>
+  </defs>
+</svg>
