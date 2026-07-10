@@ -1,9 +1,10 @@
-const { app, BrowserWindow, screen, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, globalShortcut, Tray, Menu } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
 
 let mainWindow;
 let monitorProcess;
+let tray = null; // Retain reference to prevent garbage collection
 
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
@@ -25,11 +26,11 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    skipTaskbar: true,
-    resizable: true, // Enable native window resizing
-    minWidth: 210,   // 0.6x min scale
+    skipTaskbar: true, // Keep out of Windows taskbar, runs exclusively from tray
+    resizable: true,
+    minWidth: 210,
     minHeight: 58,
-    maxWidth: 560,   // 1.6x max scale
+    maxWidth: 560,
     maxHeight: 154,
     hasShadow: false,
     show: false,
@@ -39,7 +40,6 @@ function createWindow() {
     }
   });
 
-  // Enforce aspect ratio on resize (350:96)
   mainWindow.setAspectRatio(baseWidth / baseHeight);
 
   mainWindow.loadFile('index.html');
@@ -57,6 +57,71 @@ function createWindow() {
     mainWindow = null;
     cleanup();
   });
+}
+
+function createTray() {
+  const iconPath = path.join(__dirname, 'icon.png');
+  tray = new Tray(iconPath);
+  tray.setToolTip('Spotify Widget');
+
+  // Left click toggles widget visibility
+  tray.on('click', () => {
+    toggleWindowVisibility();
+  });
+
+  // Right click context menu controls
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: 'Spotify Widget',
+      enabled: false
+    },
+    { type: 'separator' },
+    {
+      label: 'Show / Hide Widget',
+      click: () => {
+        toggleWindowVisibility();
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Play / Pause',
+      click: () => {
+        triggerMediaKey(179); // Play/Pause
+      }
+    },
+    {
+      label: 'Next Track',
+      click: () => {
+        triggerMediaKey(176); // Next
+      }
+    },
+    {
+      label: 'Previous Track',
+      click: () => {
+        triggerMediaKey(177); // Prev
+      }
+    },
+    { type: 'separator' },
+    {
+      label: 'Exit Widget',
+      click: () => {
+        app.quit();
+      }
+    }
+  ]);
+
+  tray.setContextMenu(contextMenu);
+}
+
+function toggleWindowVisibility() {
+  if (mainWindow) {
+    if (mainWindow.isVisible()) {
+      mainWindow.hide();
+    } else {
+      mainWindow.show();
+      mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    }
+  }
 }
 
 function registerGlobalShortcuts() {
@@ -132,7 +197,8 @@ ipcMain.on('spotify-control', (event, action) => {
       triggerMediaKey(176);
       break;
     case 'close':
-      app.quit();
+      // Minimize to tray instead of quitting when the user clicks 'x' on widget
+      if (mainWindow) mainWindow.hide();
       break;
   }
 });
@@ -176,7 +242,7 @@ ipcMain.on('set-lyrics-height', (event, { open, scale }) => {
   if (mainWindow) {
     const baseWidth = 350;
     const baseHeightNormal = 96;
-    const baseHeightLyrics = 290; // Expanded height
+    const baseHeightLyrics = 290;
 
     const oldBounds = mainWindow.getBounds();
     const newWidth = Math.round(baseWidth * scale);
@@ -185,10 +251,7 @@ ipcMain.on('set-lyrics-height', (event, { open, scale }) => {
     const oldBottom = oldBounds.y + oldBounds.height;
     const newY = oldBottom - newHeight;
 
-    // Turn off aspect ratio lock during vertical expansion
     mainWindow.setAspectRatio(0);
-    
-    // Disable drag resizing when lyrics are open to prevent sizing issues
     mainWindow.setResizable(!open);
     
     mainWindow.setBounds({
@@ -199,7 +262,6 @@ ipcMain.on('set-lyrics-height', (event, { open, scale }) => {
     });
 
     if (!open) {
-      // Re-enable aspect ratio lock when lyrics are closed
       mainWindow.setAspectRatio(baseWidth / baseHeightNormal);
     }
   }
@@ -207,6 +269,10 @@ ipcMain.on('set-lyrics-height', (event, { open, scale }) => {
 
 function cleanup() {
   globalShortcut.unregisterAll();
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
   if (monitorProcess) {
     try {
       monitorProcess.kill();
@@ -219,9 +285,13 @@ function cleanup() {
 
 app.whenReady().then(() => {
   createWindow();
+  createTray(); // Initialize tray icon
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+      createTray();
+    }
   });
 });
 
