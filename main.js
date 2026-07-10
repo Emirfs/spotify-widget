@@ -1,6 +1,8 @@
 const { app, BrowserWindow, screen, ipcMain, globalShortcut, Tray, Menu } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
+const fs = require('fs');
+const os = require('os');
 
 let mainWindow;
 let monitorProcess;
@@ -49,6 +51,11 @@ function createWindow() {
   mainWindow.setAspectRatio(baseWidth / baseHeight);
 
   mainWindow.loadFile('index.html');
+
+  // Capture Renderer Process Console Messages for Debugging
+  mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+    console.log(`[RENDERER CONSOLE] Level:${level} | ${message} (at ${path.basename(sourceId)}:${line})`);
+  });
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
@@ -250,14 +257,23 @@ function registerGlobalShortcuts() {
 }
 
 function startSpotifyMonitor() {
-  const scriptPath = path.join(__dirname, 'spotify-monitor.ps1');
+  const scriptName = 'spotify-monitor.ps1';
+  const asarScriptPath = path.join(__dirname, scriptName);
+  const tempScriptPath = path.join(os.tmpdir(), scriptName);
+
+  try {
+    const scriptContent = fs.readFileSync(asarScriptPath, 'utf8');
+    fs.writeFileSync(tempScriptPath, scriptContent, 'utf8');
+  } catch (err) {
+    console.error('Failed to copy spotify-monitor.ps1 to temp directory:', err);
+  }
   
   monitorProcess = spawn('powershell.exe', [
     '-NoProfile',
     '-ExecutionPolicy',
     'Bypass',
     '-File',
-    scriptPath
+    tempScriptPath
   ]);
 
   monitorProcess.stdout.on('data', (data) => {
