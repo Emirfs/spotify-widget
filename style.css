@@ -1,5 +1,35 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
+/* Theme CSS Variables */
+:root {
+  --bg-color: rgba(15, 15, 15, 0.78);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --text-main: #ffffff;
+  --text-sub: rgba(255, 255, 255, 0.5);
+  --control-color: rgba(255, 255, 255, 0.6);
+  --control-hover-bg: rgba(255, 255, 255, 0.08);
+  --control-active-bg: rgba(255, 255, 255, 0.15);
+  --play-bg: rgba(255, 255, 255, 0.15);
+  --play-hover-bg: #1DB954;
+  --shadow-color: rgba(0, 0, 0, 0.55);
+  --shadow-glow: rgba(29, 185, 84, 0.15);
+  --accent-color: #1DB954;
+}
+
+.light-theme {
+  --bg-color: rgba(255, 255, 255, 0.68);
+  --border-color: rgba(0, 0, 0, 0.12);
+  --text-main: #121212;
+  --text-sub: rgba(0, 0, 0, 0.55);
+  --control-color: rgba(0, 0, 0, 0.6);
+  --control-hover-bg: rgba(0, 0, 0, 0.06);
+  --control-active-bg: rgba(0, 0, 0, 0.12);
+  --play-bg: rgba(0, 0, 0, 0.08);
+  --play-hover-bg: #1ed760;
+  --shadow-color: rgba(0, 0, 0, 0.18);
+  --shadow-glow: rgba(30, 215, 96, 0.2);
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -14,26 +44,36 @@ body {
   overflow: hidden;
   height: 100vh;
   width: 100vw;
+  /* Allow mouse clicks to pass through empty regions of transparent window */
+  pointer-events: none;
 }
 
 /* Glassmorphism widget container */
 .widget-container {
   display: flex;
   align-items: center;
-  width: 100%;
-  height: 100%;
-  background: rgba(15, 15, 15, 0.75);
+  width: 326px; /* Dynamic width boundary */
+  height: 80px;
+  background: var(--bg-color);
   backdrop-filter: blur(24px) saturate(160%);
   -webkit-backdrop-filter: blur(24px) saturate(160%);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 12px 16px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 32px 0 var(--shadow-color);
   position: relative;
-  transition: border-color 0.3s ease, box-shadow 0.3s ease;
-  /* Make window draggable except for controls */
+  /* Capture clicks since body is set to pass-through */
+  pointer-events: auto;
+  /* Smooth transitions for mini-mode resize and themes */
+  transition: 
+    width 0.45s cubic-bezier(0.16, 1, 0.3, 1), 
+    padding 0.45s cubic-bezier(0.16, 1, 0.3, 1), 
+    background-color 0.3s ease,
+    border-color 0.3s ease, 
+    box-shadow 0.3s ease;
   -webkit-app-region: drag;
   cursor: grab;
+  overflow: hidden;
 }
 
 .widget-container:active {
@@ -42,21 +82,19 @@ body {
 
 .widget-container:hover {
   border-color: rgba(29, 185, 84, 0.3);
-  box-shadow: 0 8px 32px 0 rgba(29, 185, 84, 0.1);
+  box-shadow: 0 8px 32px 0 var(--shadow-glow);
 }
 
-/* Close button - visible on hover */
-.close-btn {
+/* Buttons Base */
+.close-btn, .theme-btn {
   position: absolute;
   top: 6px;
-  right: 8px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
-  font-size: 16px;
+  color: var(--control-color);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s ease, color 0.2s ease;
+  transition: opacity 0.2s ease, color 0.2s ease, background-color 0.2s ease;
   -webkit-app-region: no-drag;
   z-index: 10;
   width: 20px;
@@ -67,14 +105,35 @@ body {
   border-radius: 50%;
 }
 
-.widget-container:hover .close-btn {
+.widget-container:hover .close-btn,
+.widget-container:hover .theme-btn {
   opacity: 1;
+}
+
+.close-btn {
+  right: 8px;
+  font-size: 14px;
+}
+
+.theme-btn {
+  right: 30px;
 }
 
 .close-btn:hover {
   color: #ff5f56;
-  background: rgba(255, 95, 86, 0.1);
+  background: rgba(255, 95, 86, 0.15);
 }
+
+.theme-btn:hover {
+  color: var(--text-main);
+  background: var(--control-hover-bg);
+}
+
+/* Theme Icon Visibility Rules */
+.theme-btn .sun-icon { display: block; }
+.theme-btn .moon-icon { display: none; }
+.light-theme .theme-btn .sun-icon { display: none; }
+.light-theme .theme-btn .moon-icon { display: block; }
 
 /* Vinyl Record Album Art Container */
 .album-art-container {
@@ -95,6 +154,7 @@ body {
   justify-content: center;
   position: relative;
   transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  cursor: pointer;
 }
 
 /* Groove effect on vinyl */
@@ -118,7 +178,7 @@ body {
   right: 10px;
   bottom: 10px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.015);
   pointer-events: none;
 }
 
@@ -126,18 +186,35 @@ body {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: #1DB954;
+  background: var(--accent-color);
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  transition: background-color 0.3s ease;
 }
 
-/* Vinyl spin animation */
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+/* Vinyl mini-mode control overlay */
+.vinyl-overlay {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  opacity: 0;
+  z-index: 5;
+  transition: opacity 0.2s ease;
+  pointer-events: none; /* Mouse actions bubble down to vinyl */
+}
+
+/* Show mini control overlay on hover */
+.vinyl:hover .vinyl-overlay {
+  opacity: 1;
 }
 
 .vinyl.playing {
@@ -149,6 +226,11 @@ body {
   animation-play-state: paused;
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* Song Info styling */
 .song-info {
   flex: 1;
@@ -158,7 +240,8 @@ body {
   margin-left: 14px;
   margin-right: 8px;
   overflow: hidden;
-  pointer-events: none; /* Let clicks pass through to drag, except on text maybe */
+  pointer-events: none;
+  transition: opacity 0.2s ease;
 }
 
 .title-container, .artist-container {
@@ -170,9 +253,9 @@ body {
 
 .title {
   display: inline-block;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-main);
   transition: color 0.3s ease;
   letter-spacing: -0.2px;
 }
@@ -181,15 +264,16 @@ body {
   display: inline-block;
   font-size: 11px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.5);
-  margin-top: 2px;
+  color: var(--text-sub);
+  margin-top: 1px;
   letter-spacing: -0.1px;
+  transition: color 0.3s ease;
 }
 
-/* Marquee animation classes */
+/* Marquee scrolling */
 .marquee {
   animation: marquee 10s linear infinite;
-  padding-right: 50px; /* Gap between repetitions */
+  padding-right: 50px;
 }
 
 @keyframes marquee {
@@ -201,48 +285,64 @@ body {
 .controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   -webkit-app-region: no-drag;
+  transition: opacity 0.2s ease;
 }
 
 .control-btn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--control-color);
   cursor: pointer;
   outline: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
 }
 
 .control-btn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+  background: var(--control-hover-bg);
   transform: scale(1.05);
 }
 
 .control-btn:active {
+  background: var(--control-active-bg);
   transform: scale(0.95);
 }
 
 .play-pause-btn {
-  width: 36px;
-  height: 36px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  width: 32px;
+  height: 32px;
+  background: var(--play-bg);
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
 }
 
 .play-pause-btn:hover {
-  background: #1DB954;
+  background: var(--play-hover-bg);
   color: #ffffff;
-  box-shadow: 0 0 12px rgba(29, 185, 84, 0.4);
-  border-color: #1DB954;
+  box-shadow: 0 0 10px rgba(29, 185, 84, 0.45);
+  border-color: var(--accent-color);
+}
+
+/* MINI-MODE STYLING */
+.widget-container.mini-mode {
+  width: 76px;
+  padding: 12px 11px; /* Align vinyl perfectly */
+}
+
+.widget-container.mini-mode .song-info,
+.widget-container.mini-mode .controls,
+.widget-container.mini-mode .close-btn,
+.widget-container.mini-mode .theme-btn {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .hidden {

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, screen, ipcMain } = require('electron');
+const { app, BrowserWindow, screen, ipcMain, globalShortcut } = require('electron');
 const path = require('path');
 const { spawn, exec } = require('child_process');
 
@@ -9,8 +9,10 @@ function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { x, y, width, height } = primaryDisplay.workArea;
 
-  const windowWidth = 340;
-  const windowHeight = 84;
+  // Fixed window bounds - we use CSS to animate the widget's internal width
+  // while keeping the background transparent and click-through.
+  const windowWidth = 350;
+  const windowHeight = 96;
 
   // Position at bottom-left corner of the screen, slightly offset
   const posX = x + 24;
@@ -26,8 +28,8 @@ function createWindow() {
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    hasShadow: true,
-    show: false, // Prevent flashing before rendering
+    hasShadow: false, // Disabling native shadow to prevent boxy shadow on transparent areas
+    show: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -39,6 +41,7 @@ function createWindow() {
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
     startSpotifyMonitor();
+    registerGlobalShortcuts();
   });
 
   mainWindow.on('closed', () => {
@@ -47,10 +50,26 @@ function createWindow() {
   });
 }
 
+function registerGlobalShortcuts() {
+  // Register global shortcuts for playback control
+  try {
+    globalShortcut.register('Ctrl+Alt+Space', () => {
+      triggerMediaKey(179); // Play/Pause
+    });
+    globalShortcut.register('Ctrl+Alt+Right', () => {
+      triggerMediaKey(176); // Next
+    });
+    globalShortcut.register('Ctrl+Alt+Left', () => {
+      triggerMediaKey(177); // Prev
+    });
+  } catch (err) {
+    console.error('Failed to register global shortcuts:', err);
+  }
+}
+
 function startSpotifyMonitor() {
   const scriptPath = path.join(__dirname, 'spotify-monitor.ps1');
   
-  // Spawn persistent PowerShell process to watch Spotify
   monitorProcess = spawn('powershell.exe', [
     '-NoProfile',
     '-ExecutionPolicy',
@@ -79,14 +98,12 @@ function startSpotifyMonitor() {
 
   monitorProcess.on('close', (code) => {
     console.log(`Monitor process exited with code ${code}`);
-    // Auto-restart after 3 seconds if app is still running
     if (mainWindow) {
       setTimeout(startSpotifyMonitor, 3000);
     }
   });
 }
 
-// Media Control triggers using system SendKeys
 function triggerMediaKey(keyCode) {
   const command = `powershell -Command "$wsh = New-Object -ComObject WScript.Shell; $wsh.SendKeys([char]${keyCode})"`;
   exec(command, (err) => {
@@ -94,17 +111,16 @@ function triggerMediaKey(keyCode) {
   });
 }
 
-// Handle IPC control events from Renderer
 ipcMain.on('spotify-control', (event, action) => {
   switch (action) {
     case 'playpause':
-      triggerMediaKey(179); // Play/Pause code
+      triggerMediaKey(179);
       break;
     case 'prev':
-      triggerMediaKey(177); // Prev code
+      triggerMediaKey(177);
       break;
     case 'next':
-      triggerMediaKey(176); // Next code
+      triggerMediaKey(176);
       break;
     case 'close':
       app.quit();
@@ -113,6 +129,7 @@ ipcMain.on('spotify-control', (event, action) => {
 });
 
 function cleanup() {
+  globalShortcut.unregisterAll();
   if (monitorProcess) {
     try {
       monitorProcess.kill();
@@ -123,7 +140,6 @@ function cleanup() {
   }
 }
 
-// Electron lifecycle hooks
 app.whenReady().then(() => {
   createWindow();
 
