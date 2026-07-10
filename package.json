@@ -18,7 +18,7 @@
     "package": "electron-builder build --win --x64"
   },
   "bin": {
-    "spotify-widget": "./bin/cli.js"
+    "spotify-widget": "bin/cli.js"
   },
   "dependencies": {
   },
