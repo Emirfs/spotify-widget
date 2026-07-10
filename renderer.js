@@ -4,8 +4,10 @@ const { ipcRenderer } = require('electron');
 const widgetContainer = document.getElementById('widgetContainer');
 const songTitle = document.getElementById('songTitle');
 const songArtist = document.getElementById('songArtist');
-const vinyl = document.getElementById('vinyl');
-const vinylOverlay = document.getElementById('vinylOverlay');
+const coverWrapper = document.getElementById('coverWrapper');
+const coverOverlay = document.getElementById('coverOverlay');
+const albumArt = document.getElementById('albumArt');
+const coverPlaceholder = document.getElementById('coverPlaceholder');
 const playPauseBtn = document.getElementById('playPauseBtn');
 const playIcon = document.getElementById('playIcon');
 const pauseIcon = document.getElementById('pauseIcon');
@@ -19,6 +21,7 @@ const themeBtn = document.getElementById('themeBtn');
 let isPlaying = false;
 let isMiniMode = false;
 let currentRawTitle = '';
+const artCache = {}; // Cache to prevent API spamming
 
 // 1. Theme Persistence & Application
 const savedTheme = localStorage.getItem('theme');
@@ -27,7 +30,7 @@ if (savedTheme === 'light') {
 }
 
 themeBtn.addEventListener('click', (e) => {
-  e.stopPropagation(); // Prevent dblclick or other container events
+  e.stopPropagation();
   const isLight = document.body.classList.toggle('light-theme');
   localStorage.setItem('theme', isLight ? 'light' : 'dark');
 });
@@ -44,25 +47,22 @@ function toggleMiniMode() {
 
 // Double click container (excluding controls) to toggle mini-mode
 widgetContainer.addEventListener('dblclick', (e) => {
-  if (e.target.closest('button') || e.target.closest('.controls') || e.target.closest('.vinyl-overlay')) {
+  if (e.target.closest('button') || e.target.closest('.controls') || e.target.closest('.cover-overlay')) {
     return;
   }
   toggleMiniMode();
 });
 
-// Double click vinyl to toggle mini-mode
-vinyl.addEventListener('dblclick', (e) => {
+// Double click cover to toggle mini-mode
+coverWrapper.addEventListener('dblclick', (e) => {
   e.stopPropagation();
   toggleMiniMode();
 });
 
-// 3. Playback State Synchronization (Icons and Vinyl rotation)
+// 3. Playback State Synchronization (Icons)
 function setPlaybackState(playing) {
   isPlaying = playing;
   if (playing) {
-    vinyl.classList.remove('paused');
-    vinyl.classList.add('playing');
-    
     // Main button icons
     playIcon.classList.add('hidden');
     pauseIcon.classList.remove('hidden');
@@ -71,9 +71,6 @@ function setPlaybackState(playing) {
     miniPlayIcon.classList.add('hidden');
     miniPauseIcon.classList.remove('hidden');
   } else {
-    vinyl.classList.remove('playing');
-    vinyl.classList.add('paused');
-    
     // Main button icons
     playIcon.classList.remove('hidden');
     pauseIcon.classList.add('hidden');
@@ -84,8 +81,8 @@ function setPlaybackState(playing) {
   }
 }
 
-// 4. Clicking the vinyl toggles play/pause (convenient in both modes)
-vinyl.addEventListener('click', (e) => {
+// 4. Clicking the cover toggles play/pause (convenient in both modes)
+coverWrapper.addEventListener('click', (e) => {
   // Prevent click when double clicking
   if (e.detail > 1) return; 
   setPlaybackState(!isPlaying);
@@ -104,13 +101,74 @@ function updateTextWithMarquee(element, container, text) {
   if (scrollWidth > containerWidth) {
     element.innerHTML = `<span>${text}</span><span style="padding-left: 40px;">${text}</span>`;
     element.classList.add('marquee');
-    const speed = Math.max(8, Math.round(scrollWidth / 25)); // Slightly faster marquee
+    const speed = Math.max(8, Math.round(scrollWidth / 25));
     element.style.animationDuration = `${speed}s`;
   }
 }
 
-// 6. Listen for song updates from the main process
-ipcRenderer.on('spotify-update', (event, title) => {
+// 6. Album Art Fetching Logic (iTunes API + Deezer Fallback)
+async function fetchAlbumArt(artist, song) {
+  const cacheKey = `${artist.toLowerCase()} - ${song.toLowerCase()}`;
+  if (artCache[cacheKey]) {
+    return artCache[cacheKey];
+  }
+
+  const query = `${artist} ${song}`;
+  
+  // Try iTunes API first (Fast, no rate limit, high-res 300x300)
+  try {
+    const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&limit=1&entity=song`;
+    const res = await fetch(itunesUrl);
+    const data = await res.json();
+    if (data.results && data.results.length > 0) {
+      const artUrl = data.results[0].artworkUrl100.replace('100x100bb.jpg', '300x300bb.jpg');
+      artCache[cacheKey] = artUrl;
+      return artUrl;
+    }
+  } catch (err) {
+    console.error("iTunes API error:", err);
+  }
+
+  // Fallback to Deezer API (No auth, good backup)
+  try {
+    const deezerUrl = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=1`;
+    const res = await fetch(deezerUrl);
+    const data = await res.json();
+    if (data.data && data.data.length > 0) {
+      const artUrl = data.data[0].album.cover_medium;
+      artCache[cacheKey] = artUrl;
+      return artUrl;
+    }
+  } catch (err) {
+    console.error("Deezer API error:", err);
+  }
+
+  return null;
+}
+
+// Set image source with smooth fade-in
+albumArt.onload = () => {
+  albumArt.style.opacity = 1;
+};
+
+async function updateAlbumArt(artist, song) {
+  albumArt.style.opacity = 0; // Fade out current art
+  
+  if (!artist || !song) {
+    albumArt.src = '';
+    return;
+  }
+
+  const artUrl = await fetchAlbumArt(artist, song);
+  if (artUrl) {
+    albumArt.src = artUrl;
+  } else {
+    albumArt.src = ''; // Show placeholder if not found
+  }
+}
+
+// 7. Listen for song updates from the main process
+ipcRenderer.on('spotify-update', async (event, title) => {
   if (title === currentRawTitle) return;
   currentRawTitle = title;
 
@@ -127,17 +185,12 @@ ipcRenderer.on('spotify-update', (event, title) => {
     setPlaybackState(false);
     updateTextWithMarquee(songTitle, titleContainer, 'Paused');
     updateTextWithMarquee(songArtist, artistContainer, 'Spotify is active');
-    
-    // Vinyl paused state style
-    vinyl.classList.add('paused');
+    updateAlbumArt(null, null); // Clear art (shows placeholder)
   } else if (!title || title.trim() === '') {
     setPlaybackState(false);
     updateTextWithMarquee(songTitle, titleContainer, 'Not Running');
     updateTextWithMarquee(songArtist, artistContainer, 'Start Spotify');
-    
-    // Vinyl completely stopped
-    vinyl.classList.remove('playing');
-    vinyl.classList.remove('paused');
+    updateAlbumArt(null, null);
   } else {
     setPlaybackState(true);
     
@@ -152,10 +205,13 @@ ipcRenderer.on('spotify-update', (event, title) => {
 
     updateTextWithMarquee(songTitle, titleContainer, song);
     updateTextWithMarquee(songArtist, artistContainer, artist);
+    
+    // Fetch and display cover artwork
+    updateAlbumArt(artist, song);
   }
 });
 
-// 7. Wide controls events
+// 8. Wide controls events
 playPauseBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   setPlaybackState(!isPlaying);

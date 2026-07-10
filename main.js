@@ -9,8 +9,6 @@ function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { x, y, width, height } = primaryDisplay.workArea;
 
-  // Fixed window bounds - we use CSS to animate the widget's internal width
-  // while keeping the background transparent and click-through.
   const windowWidth = 350;
   const windowHeight = 96;
 
@@ -28,7 +26,7 @@ function createWindow() {
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    hasShadow: false, // Disabling native shadow to prevent boxy shadow on transparent areas
+    hasShadow: false, // Custom CSS shadow is used instead of native boxy window shadow
     show: false,
     webPreferences: {
       nodeIntegration: true,
@@ -40,6 +38,10 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
+    // Strongest level of always-on-top so it stays above full screen apps/games
+    mainWindow.setAlwaysOnTop(true, 'screen-saver');
+    mainWindow.setVisibleOnAllWorkspaces(true);
+    
     startSpotifyMonitor();
     registerGlobalShortcuts();
   });
@@ -51,7 +53,6 @@ function createWindow() {
 }
 
 function registerGlobalShortcuts() {
-  // Register global shortcuts for playback control
   try {
     globalShortcut.register('Ctrl+Alt+Space', () => {
       triggerMediaKey(179); // Play/Pause

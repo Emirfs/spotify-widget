@@ -23,21 +23,26 @@
     <!-- Close Button -->
     <button class="close-btn" id="closeBtn" title="Close widget">&times;</button>
 
-    <!-- Vinyl Album Art -->
+    <!-- Album Art Section (replaced vinyl) -->
     <div class="album-art-container">
-      <div class="vinyl" id="vinyl">
-        <!-- Vinyl Overlay (Mini-mode Play/Pause control) -->
-        <div class="vinyl-overlay" id="vinylOverlay" title="Play/Pause">
-          <svg class="mini-play-icon" viewBox="0 0 24 24" width="10" height="10" fill="currentColor">
-            <path d="M8 5v14l11-7z"/>
-          </svg>
-          <svg class="mini-pause-icon hidden" viewBox="0 0 24 24" width="10" height="10" fill="currentColor">
-            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+      <div class="cover-wrapper" id="coverWrapper">
+        <!-- Dynamic Image -->
+        <img id="albumArt" class="album-art-img" src="" alt="Album Art">
+        
+        <!-- Fallback Placeholder -->
+        <div class="cover-placeholder" id="coverPlaceholder">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 15.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v-.07zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
           </svg>
         </div>
-        <div class="vinyl-center">
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-            <path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.565.387-.86.207-2.377-1.454-5.37-1.783-8.893-.98-.336.075-.67-.14-.744-.475-.075-.336.14-.67.476-.745 3.857-.88 7.15-.506 9.813 1.127.295.18.387.564.208.86zm1.224-2.72c-.226.367-.707.487-1.074.26-2.72-1.672-6.87-2.157-10.082-1.182-.413.125-.847-.107-.972-.52-.125-.413.107-.847.52-.972 3.673-1.114 8.243-.57 11.348 1.34.367.227.487.708.26 1.074zm.106-2.833C14.384 8.71 8.567 8.518 5.18 9.546c-.53.16-1.09-.14-1.25-.67-.16-.53.14-1.09.67-1.25 3.882-1.178 10.31-.955 14.417 1.482.478.283.634.897.35 1.376-.282.48-.897.635-1.376.35z"/>
+
+        <!-- Play/Pause Overlay in Mini-Mode -->
+        <div class="cover-overlay" id="coverOverlay" title="Play/Pause">
+          <svg class="mini-play-icon" viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+          <svg class="mini-pause-icon hidden" viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
           </svg>
         </div>
       </div>

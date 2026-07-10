@@ -2,32 +2,34 @@
 
 /* Theme CSS Variables */
 :root {
-  --bg-color: rgba(15, 15, 15, 0.78);
-  --border-color: rgba(255, 255, 255, 0.08);
+  --bg-color: rgba(10, 10, 10, 0.45); /* High transparency dark */
+  --border-color: rgba(255, 255, 255, 0.05); /* Ultra subtle border */
   --text-main: #ffffff;
   --text-sub: rgba(255, 255, 255, 0.5);
   --control-color: rgba(255, 255, 255, 0.6);
   --control-hover-bg: rgba(255, 255, 255, 0.08);
   --control-active-bg: rgba(255, 255, 255, 0.15);
-  --play-bg: rgba(255, 255, 255, 0.15);
+  --play-bg: rgba(255, 255, 255, 0.12);
   --play-hover-bg: #1DB954;
-  --shadow-color: rgba(0, 0, 0, 0.55);
-  --shadow-glow: rgba(29, 185, 84, 0.15);
+  --shadow-color: rgba(0, 0, 0, 0.45);
+  --shadow-glow: rgba(29, 185, 84, 0.12);
   --accent-color: #1DB954;
+  --placeholder-grad: linear-gradient(135deg, #2b2b2b, #141414);
 }
 
 .light-theme {
-  --bg-color: rgba(255, 255, 255, 0.68);
-  --border-color: rgba(0, 0, 0, 0.12);
+  --bg-color: rgba(255, 255, 255, 0.35); /* High transparency light */
+  --border-color: rgba(0, 0, 0, 0.06);
   --text-main: #121212;
   --text-sub: rgba(0, 0, 0, 0.55);
   --control-color: rgba(0, 0, 0, 0.6);
-  --control-hover-bg: rgba(0, 0, 0, 0.06);
-  --control-active-bg: rgba(0, 0, 0, 0.12);
-  --play-bg: rgba(0, 0, 0, 0.08);
+  --control-hover-bg: rgba(0, 0, 0, 0.05);
+  --control-active-bg: rgba(0, 0, 0, 0.1);
+  --play-bg: rgba(0, 0, 0, 0.06);
   --play-hover-bg: #1ed760;
-  --shadow-color: rgba(0, 0, 0, 0.18);
-  --shadow-glow: rgba(30, 215, 96, 0.2);
+  --shadow-color: rgba(0, 0, 0, 0.12);
+  --shadow-glow: rgba(30, 215, 96, 0.15);
+  --placeholder-grad: linear-gradient(135deg, #e4e4e4, #c7c7c7);
 }
 
 * {
@@ -52,11 +54,11 @@ body {
 .widget-container {
   display: flex;
   align-items: center;
-  width: 326px; /* Dynamic width boundary */
+  width: 326px;
   height: 80px;
   background: var(--bg-color);
-  backdrop-filter: blur(24px) saturate(160%);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
   border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 12px 16px;
@@ -81,7 +83,7 @@ body {
 }
 
 .widget-container:hover {
-  border-color: rgba(29, 185, 84, 0.3);
+  border-color: rgba(29, 185, 84, 0.25);
   box-shadow: 0 8px 32px 0 var(--shadow-glow);
 }
 
@@ -135,7 +137,7 @@ body {
 .light-theme .theme-btn .sun-icon { display: none; }
 .light-theme .theme-btn .moon-icon { display: block; }
 
-/* Vinyl Record Album Art Container */
+/* Album Art styling */
 .album-art-container {
   display: flex;
   align-items: center;
@@ -143,65 +145,57 @@ body {
   -webkit-app-region: no-drag;
 }
 
-.vinyl {
+.cover-wrapper {
   width: 52px;
   height: 52px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #333 10%, #111 30%, #222 40%, #111 60%, #222 70%, #050505 100%);
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 0 1px rgba(255, 255, 255, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 10px;
+  overflow: hidden;
   position: relative;
-  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 4px 14px var(--shadow-color);
+  border: 1px solid var(--border-color);
   cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.3s ease;
 }
 
-/* Groove effect on vinyl */
-.vinyl::before {
-  content: '';
+.cover-wrapper:hover {
+  transform: scale(1.04);
+  box-shadow: 0 6px 18px var(--shadow-color);
+}
+
+.album-art-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: 2;
+  position: relative;
+}
+
+.cover-placeholder {
   position: absolute;
-  top: 4px;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  pointer-events: none;
-}
-
-.vinyl::after {
-  content: '';
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.015);
-  pointer-events: none;
-}
-
-.vinyl-center {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--accent-color);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--placeholder-grad);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  transition: background-color 0.3s ease;
+  color: var(--text-sub);
+  z-index: 1;
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
-/* Vinyl mini-mode control overlay */
-.vinyl-overlay {
+/* Album cover mini-mode/general play control overlay */
+.cover-overlay {
   position: absolute;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.7);
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -209,26 +203,10 @@ body {
   opacity: 0;
   z-index: 5;
   transition: opacity 0.2s ease;
-  pointer-events: none; /* Mouse actions bubble down to vinyl */
 }
 
-/* Show mini control overlay on hover */
-.vinyl:hover .vinyl-overlay {
+.cover-wrapper:hover .cover-overlay {
   opacity: 1;
-}
-
-.vinyl.playing {
-  animation: spin 8s linear infinite;
-}
-
-.vinyl.paused {
-  animation: spin 8s linear infinite;
-  animation-play-state: paused;
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 /* Song Info styling */
@@ -334,7 +312,7 @@ body {
 /* MINI-MODE STYLING */
 .widget-container.mini-mode {
   width: 76px;
-  padding: 12px 11px; /* Align vinyl perfectly */
+  padding: 12px 11px; /* Align album art perfectly */
 }
 
 .widget-container.mini-mode .song-info,
