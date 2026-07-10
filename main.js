@@ -6,15 +6,21 @@ let mainWindow;
 let monitorProcess;
 let tray = null; // Retain reference to prevent garbage collection
 
+// Settings state synchronized from Renderer
+let currentSettings = {
+  theme: 'dark',
+  transparency: false,
+  scale: 1.0,
+  lyricsOpen: false
+};
+
 function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { x, y, width, height } = primaryDisplay.workArea;
 
-  // Base window dimensions
   const baseWidth = 350;
   const baseHeight = 96;
 
-  // Position at bottom-left corner of the screen, slightly offset
   const posX = x + 24;
   const posY = y + height - baseHeight - 24;
 
@@ -26,7 +32,7 @@ function createWindow() {
     frame: false,
     transparent: true,
     alwaysOnTop: true,
-    skipTaskbar: true, // Keep out of Windows taskbar, runs exclusively from tray
+    skipTaskbar: true, // Exclusive tray app behavior
     resizable: true,
     minWidth: 210,
     minHeight: 58,
@@ -69,7 +75,12 @@ function createTray() {
     toggleWindowVisibility();
   });
 
-  // Right click context menu controls
+  rebuildTrayMenu();
+}
+
+function rebuildTrayMenu() {
+  if (!tray) return;
+
   const contextMenu = Menu.buildFromTemplate([
     {
       label: 'Spotify Widget',
@@ -82,23 +93,115 @@ function createTray() {
         toggleWindowVisibility();
       }
     },
+    {
+      label: 'Settings',
+      submenu: [
+        {
+          label: 'Theme',
+          submenu: [
+            {
+              label: 'Dark Glass',
+              type: 'radio',
+              checked: currentSettings.theme === 'dark',
+              click: () => {
+                sendToRenderer('change-theme', 'dark');
+              }
+            },
+            {
+              label: 'Light Glass',
+              type: 'radio',
+              checked: currentSettings.theme === 'light',
+              click: () => {
+                sendToRenderer('change-theme', 'light');
+              }
+            }
+          ]
+        },
+        {
+          label: 'Transparency',
+          submenu: [
+            {
+              label: 'Glassmorphism',
+              type: 'radio',
+              checked: !currentSettings.transparency,
+              click: () => {
+                sendToRenderer('change-transparency', false);
+              }
+            },
+            {
+              label: 'Pure Transparent',
+              type: 'radio',
+              checked: currentSettings.transparency,
+              click: () => {
+                sendToRenderer('change-transparency', true);
+              }
+            }
+          ]
+        },
+        {
+          label: 'Scale / Size',
+          submenu: [
+            {
+              label: 'Small (80%)',
+              type: 'radio',
+              checked: Math.abs(currentSettings.scale - 0.8) < 0.05,
+              click: () => {
+                sendToRenderer('change-scale', 0.8);
+              }
+            },
+            {
+              label: 'Normal (100%)',
+              type: 'radio',
+              checked: Math.abs(currentSettings.scale - 1.0) < 0.05,
+              click: () => {
+                sendToRenderer('change-scale', 1.0);
+              }
+            },
+            {
+              label: 'Large (120%)',
+              type: 'radio',
+              checked: Math.abs(currentSettings.scale - 1.2) < 0.05,
+              click: () => {
+                sendToRenderer('change-scale', 1.2);
+              }
+            },
+            {
+              label: 'Extra Large (140%)',
+              type: 'radio',
+              checked: Math.abs(currentSettings.scale - 1.4) < 0.05,
+              click: () => {
+                sendToRenderer('change-scale', 1.4);
+              }
+            }
+          ]
+        },
+        {
+          label: 'Lyrics Panel',
+          type: 'checkbox',
+          checked: currentSettings.lyricsOpen,
+          click: () => {
+            sendToRenderer('change-lyrics', !currentSettings.lyricsOpen);
+          }
+        }
+      ]
+    },
     { type: 'separator' },
     {
       label: 'Play / Pause',
       click: () => {
-        triggerMediaKey(179); // Play/Pause
+        triggerMediaKey(179);
       }
     },
     {
       label: 'Next Track',
       click: () => {
-        triggerMediaKey(176); // Next
+        triggerMediaKey(176);
       }
     },
     {
       label: 'Previous Track',
       click: () => {
-        triggerMediaKey(177); // Prev
+        triggerMediaKey(177);
       }
     },
     { type: 'separator' },
@@ -111,6 +214,12 @@ function createTray() {
   ]);
 
   tray.setContextMenu(contextMenu);
+}
+
+function sendToRenderer(channel, data) {
+  if (mainWindow) {
+    mainWindow.webContents.send(channel, data);
+  }
 }
 
 function toggleWindowVisibility() {
@@ -197,7 +306,6 @@ ipcMain.on('spotify-control', (event, action) => {
       triggerMediaKey(176);
       break;
     case 'close':
-      // Minimize to tray instead of quitting when the user clicks 'x' on widget
       if (mainWindow) mainWindow.hide();
       break;
   }
@@ -267,6 +375,12 @@ ipcMain.on('set-lyrics-height', (event, { open, scale }) => {
   }
 });
 
+// Sync settings state from Renderer and rebuild menu
+ipcMain.on('sync-settings', (event, settings) => {
+  currentSettings = settings;
+  rebuildTrayMenu();
+});
+
 function cleanup() {
   globalShortcut.unregisterAll();
   if (tray) {
@@ -285,7 +399,7 @@ function cleanup() {
 
 app.whenReady().then(() => {
   createWindow();
-  createTray(); // Initialize tray icon
+  createTray();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

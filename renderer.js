@@ -32,13 +32,43 @@ const lyricLineContainer = document.getElementById('lyricLineContainer');
 let isPlaying = false;
 let isMiniMode = false;
 let currentRawTitle = '';
-const artCache = {}; // Cache to prevent API spamming
-let syncedLyricsArray = []; // Parsed timed lyrics
-let plainLyricsText = ''; // Fallback raw lyrics text
+const artCache = {}; 
+let syncedLyricsArray = []; 
+let plainLyricsText = ''; 
 
 // 1. Sizing and Scaling Logic
 let currentScale = 1.0;
 let scaleTimeout;
+
+// Synchronization helper to tell Main process the current settings
+function syncSettingsToMain() {
+  const isLight = document.body.classList.contains('light-theme');
+  ipcRenderer.send('sync-settings', {
+    theme: isLight ? 'light' : 'dark',
+    transparency: isTransparentMode,
+    scale: currentScale,
+    lyricsOpen: lyricsOpen
+  });
+}
+
+function updateScale(scale) {
+  currentScale = Math.max(0.6, Math.min(1.5, Math.round(scale * 100) / 100));
+  
+  document.documentElement.style.setProperty('--scale', currentScale);
+  localStorage.setItem('scale', currentScale);
+  
+  ipcRenderer.send('set-scale', currentScale);
+  
+  const percentage = Math.round(currentScale * 100);
+  scaleIndicator.textContent = `${percentage}%`;
+  scaleIndicator.classList.add('visible');
+  
+  clearTimeout(scaleTimeout);
+  scaleTimeout = setTimeout(() => {
+    scaleIndicator.classList.remove('visible');
+    syncSettingsToMain();
+  }, 1000);
+}
 
 window.addEventListener('resize', () => {
   if (isMiniMode) return; 
@@ -56,6 +86,7 @@ window.addEventListener('resize', () => {
   clearTimeout(scaleTimeout);
   scaleTimeout = setTimeout(() => {
     scaleIndicator.classList.remove('visible');
+    syncSettingsToMain(); // Update tray settings
   }, 800);
 });
 
@@ -66,10 +97,12 @@ if (!isNaN(savedScale)) {
   currentScale = savedScale;
   setTimeout(() => {
     ipcRenderer.send('set-scale', savedScale);
+    syncSettingsToMain();
   }, 50);
 } else {
   setTimeout(() => {
     ipcRenderer.send('set-scale', 1.0);
+    syncSettingsToMain();
   }, 50);
 }
 
@@ -83,6 +116,7 @@ themeBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   const isLight = document.body.classList.toggle('light-theme');
   localStorage.setItem('theme', isLight ? 'light' : 'dark');
+  syncSettingsToMain();
 });
 
 // 3. Completely Transparent Mode
@@ -98,7 +132,12 @@ if (savedTransparency) {
 transparencyBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   isTransparentMode = !isTransparentMode;
-  if (isTransparentMode) {
+  updateTransparencyMode(isTransparentMode);
+});
+
+function updateTransparencyMode(isTransparent) {
+  isTransparentMode = isTransparent;
+  if (isTransparent) {
     widgetContainer.classList.add('pure-transparent');
     lyricsPanel.classList.add('pure-transparent');
     transparencyBtn.classList.add('active');
@@ -107,8 +146,9 @@ transparencyBtn.addEventListener('click', (e) => {
     lyricsPanel.classList.remove('pure-transparent');
     transparencyBtn.classList.remove('active');
   }
-  localStorage.setItem('transparency', isTransparentMode);
-});
+  localStorage.setItem('transparency', isTransparent);
+  syncSettingsToMain();
+}
 
 // 4. Mini-Mode Toggle
 function toggleMiniMode() {
@@ -185,7 +225,6 @@ function updateProgressUI() {
     progressBar.style.width = `${percentage}%`;
     timeDisplay.textContent = `${formatTime(currentPositionMs)} / ${formatTime(trackDurationMs)}`;
     
-    // Sync single-line karaoke lyrics display
     syncKaraokeLyrics();
   } else {
     progressBar.style.width = '0%';
@@ -215,7 +254,6 @@ function syncKaraokeLyrics() {
   if (activeLine) {
     lyricLineContainer.classList.add('active');
     
-    // Smooth opacity transition for text changes
     if (lyricLine.textContent !== activeLine) {
       lyricLine.style.opacity = 0;
       setTimeout(() => {
@@ -224,7 +262,6 @@ function syncKaraokeLyrics() {
       }, 120);
     }
 
-    // Auto-scroll inside expanded lyrics panel if open
     if (lyricsOpen && activeIndex !== lastLyricIndex) {
       lastLyricIndex = activeIndex;
       const paragraphs = lyricsContent.querySelectorAll('p');
@@ -237,7 +274,6 @@ function syncKaraokeLyrics() {
       }
     }
   } else {
-    // Before first lyrics line triggers
     lyricLineContainer.classList.remove('active');
   }
 }
@@ -252,7 +288,7 @@ function startProgressTimer() {
   }, 1000);
 }
 
-// 8. Dynamic Color Adaptation (Dominant color extraction)
+// 8. Dynamic Color Adaptation
 albumArt.crossOrigin = "anonymous"; 
 
 albumArt.onload = () => {
@@ -294,7 +330,6 @@ function getDominantColor(imgEl) {
     g = Math.round(g / count);
     b = Math.round(b / count);
     
-    // Boost brightness if extracted color is too dark
     const brightness = (r * 299 + g * 587 + b * 114) / 1000;
     if (brightness < 40) {
       r = Math.min(255, r + 60);
@@ -313,14 +348,35 @@ function resetAccentColor() {
   document.documentElement.style.setProperty('--shadow-glow', 'rgba(29, 185, 84, 0.12)');
 }
 
-// 9. Album Art, Duration & Synced Lyrics Fetching (LRCLIB + iTunes + Deezer)
+// 9. Query Cleaning Helper (Strips Remasters, Live, brackets, parenthesized suffixes)
+function cleanSongAndArtist(artist, song) {
+  let cleanSong = song
+    .replace(/\(.*?\)/g, '') 
+    .replace(/\[.*?\]/g, '') 
+    .replace(/\s-\s(?:\d{4}\s+)?Remastered.*$/i, '')
+    .replace(/\s-\sLive.*$/i, '')
+    .replace(/\s-\sRadio\s+Edit.*$/i, '')
+    .replace(/\s-\sSingle\s+Version.*$/i, '')
+    .replace(/\s-\sStereo.*$/i, '')
+    .replace(/\s-\sMono.*$/i, '')
+    .replace(/\s-\sMix.*$/i, '')
+    .trim();
+    
+  if (!cleanSong) cleanSong = song; 
+  
+  return {
+    cleanArtist: artist.trim(),
+    cleanSong: cleanSong
+  };
+}
+
+// 10. Album Art, Duration & Synced Lyrics Fetching (LRCLIB + iTunes + Deezer)
 async function fetchTrackData(artist, song) {
   const cacheKey = `${artist.toLowerCase()} - ${song.toLowerCase()}`;
   if (artCache[cacheKey]) {
     return artCache[cacheKey];
   }
 
-  // Fetch from APIs in parallel
   const artworkPromise = fetchArtworkAndDurationFromCDNs(artist, song);
   const lyricsPromise = fetchLyricsFromLRCLIB(artist, song);
   
@@ -338,9 +394,9 @@ async function fetchTrackData(artist, song) {
 }
 
 async function fetchArtworkAndDurationFromCDNs(artist, song) {
-  const query = `${artist} ${song}`;
+  const { cleanArtist, cleanSong } = cleanSongAndArtist(artist, song);
+  const query = `${cleanArtist} ${cleanSong}`;
   
-  // 1. iTunes API
   try {
     const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&limit=1&entity=song`;
     const res = await fetch(itunesUrl);
@@ -355,7 +411,6 @@ async function fetchArtworkAndDurationFromCDNs(artist, song) {
     console.error("iTunes API error:", err);
   }
 
-  // 2. Deezer API Fallback
   try {
     const deezerUrl = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=1`;
     const res = await fetch(deezerUrl);
@@ -374,8 +429,10 @@ async function fetchArtworkAndDurationFromCDNs(artist, song) {
 }
 
 async function fetchLyricsFromLRCLIB(artist, song) {
+  const { cleanArtist, cleanSong } = cleanSongAndArtist(artist, song);
+  
   try {
-    const url = `https://lrclib.net/api/get?artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(song)}`;
+    const url = `https://lrclib.net/api/get?artist=${encodeURIComponent(cleanArtist)}&track=${encodeURIComponent(cleanSong)}`;
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
@@ -445,7 +502,6 @@ async function updateTrackMetadata(artist, song) {
     trackDurationMs = item.durationMs;
     currentPositionMs = 0;
     
-    // Parse Lyrics
     plainLyricsText = item.plainLyrics;
     if (item.syncedLyrics) {
       syncedLyricsArray = parseLRC(item.syncedLyrics);
@@ -461,7 +517,7 @@ async function updateTrackMetadata(artist, song) {
   }
 }
 
-// 10. Lyrics Panel Toggle and Content Renderer
+// 11. Lyrics Panel Toggle and Content Renderer
 let lyricsOpen = false;
 
 function toggleLyricsPanel(open) {
@@ -475,6 +531,7 @@ function toggleLyricsPanel(open) {
     lyricsBtn.classList.remove('active');
   }
   ipcRenderer.send('set-lyrics-height', { open: lyricsOpen, scale: currentScale });
+  syncSettingsToMain();
 }
 
 lyricsBtn.addEventListener('click', (e) => {
@@ -490,20 +547,17 @@ function renderLyricsPanelContent() {
     return;
   }
 
-  // Case 1: Synced Lyrics Available
   if (syncedLyricsArray.length > 0) {
     lyricsContent.innerHTML = '';
     syncedLyricsArray.forEach((line, index) => {
       const p = document.createElement('p');
       p.textContent = line.text || '...';
       p.setAttribute('data-index', index);
-      // Check if it's the active line currently
       if (index === lastLyricIndex) {
         p.classList.add('active');
       }
       lyricsContent.appendChild(p);
     });
-    // Scroll to current active paragraph if any
     const activeParagraph = lyricsContent.querySelector(`p[data-index="${lastLyricIndex}"]`);
     if (activeParagraph) {
       setTimeout(() => {
@@ -511,18 +565,39 @@ function renderLyricsPanelContent() {
       }, 50);
     }
   } 
-  // Case 2: Plain Lyrics Fallback
   else if (plainLyricsText) {
     lyricsContent.textContent = plainLyricsText;
     lyricsContent.scrollTop = 0;
   } 
-  // Case 3: No Lyrics
   else {
     lyricsContent.innerHTML = '<div style="opacity: 0.6; margin-top: 40px;">Lyrics not found.</div>';
   }
 }
 
-// 11. Listen for song updates from the main process
+// 12. IPC Settings Synchronization Listeners (from Main Process)
+ipcRenderer.on('change-theme', (event, theme) => {
+  if (theme === 'light') {
+    document.body.classList.add('light-theme');
+  } else {
+    document.body.classList.remove('light-theme');
+  }
+  localStorage.setItem('theme', theme);
+  syncSettingsToMain();
+});
+
+ipcRenderer.on('change-transparency', (event, isTransparent) => {
+  updateTransparencyMode(isTransparent);
+});
+
+ipcRenderer.on('change-scale', (event, scale) => {
+  updateScale(scale);
+});
+
+ipcRenderer.on('change-lyrics', (event, open) => {
+  toggleLyricsPanel(open);
+});
+
+// 13. Listen for song updates from the main process
 ipcRenderer.on('spotify-update', async (event, title) => {
   if (title === currentRawTitle) return;
   currentRawTitle = title;
@@ -561,17 +636,15 @@ ipcRenderer.on('spotify-update', async (event, title) => {
     updateTextWithMarquee(songTitle, titleContainer, song);
     updateTextWithMarquee(songArtist, artistContainer, artist);
     
-    // Concurrently fetch metadata and synced lyrics
     await updateTrackMetadata(artist, song);
 
-    // Auto-update lyrics panel content if visible
     if (lyricsOpen) {
       renderLyricsPanelContent();
     }
   }
 });
 
-// 12. Wide controls events
+// 14. Wide controls events
 playPauseBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   setPlaybackState(!isPlaying);
