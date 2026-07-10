@@ -1,0 +1,250 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+body {
+  background: transparent;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
+/* Glassmorphism widget container */
+.widget-container {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  background: rgba(15, 15, 15, 0.75);
+  backdrop-filter: blur(24px) saturate(160%);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 12px 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  position: relative;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  /* Make window draggable except for controls */
+  -webkit-app-region: drag;
+  cursor: grab;
+}
+
+.widget-container:active {
+  cursor: grabbing;
+}
+
+.widget-container:hover {
+  border-color: rgba(29, 185, 84, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(29, 185, 84, 0.1);
+}
+
+/* Close button - visible on hover */
+.close-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 16px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.2s ease;
+  -webkit-app-region: no-drag;
+  z-index: 10;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.widget-container:hover .close-btn {
+  opacity: 1;
+}
+
+.close-btn:hover {
+  color: #ff5f56;
+  background: rgba(255, 95, 86, 0.1);
+}
+
+/* Vinyl Record Album Art Container */
+.album-art-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-app-region: no-drag;
+}
+
+.vinyl {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #333 10%, #111 30%, #222 40%, #111 60%, #222 70%, #050505 100%);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4), inset 0 0 1px rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Groove effect on vinyl */
+.vinyl::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  pointer-events: none;
+}
+
+.vinyl::after {
+  content: '';
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.02);
+  pointer-events: none;
+}
+
+.vinyl-center {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #1DB954;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Vinyl spin animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.vinyl.playing {
+  animation: spin 8s linear infinite;
+}
+
+.vinyl.paused {
+  animation: spin 8s linear infinite;
+  animation-play-state: paused;
+}
+
+/* Song Info styling */
+.song-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  margin-left: 14px;
+  margin-right: 8px;
+  overflow: hidden;
+  pointer-events: none; /* Let clicks pass through to drag, except on text maybe */
+}
+
+.title-container, .artist-container {
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  width: 100%;
+}
+
+.title {
+  display: inline-block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #ffffff;
+  transition: color 0.3s ease;
+  letter-spacing: -0.2px;
+}
+
+.artist {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+  letter-spacing: -0.1px;
+}
+
+/* Marquee animation classes */
+.marquee {
+  animation: marquee 10s linear infinite;
+  padding-right: 50px; /* Gap between repetitions */
+}
+
+@keyframes marquee {
+  0% { transform: translate3d(0, 0, 0); }
+  100% { transform: translate3d(-50%, 0, 0); }
+}
+
+/* Media Controls container */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  -webkit-app-region: no-drag;
+}
+
+.control-btn {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  outline: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.control-btn:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+  transform: scale(1.05);
+}
+
+.control-btn:active {
+  transform: scale(0.95);
+}
+
+.play-pause-btn {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.play-pause-btn:hover {
+  background: #1DB954;
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(29, 185, 84, 0.4);
+  border-color: #1DB954;
+}
+
+.hidden {
+  display: none !important;
+}
