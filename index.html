@@ -17,6 +17,13 @@
     <!-- Visual Scale Feedback Overlay -->
     <div class="scale-indicator" id="scaleIndicator">100%</div>
 
+    <!-- Transparency Mode Button -->
+    <button class="transparency-btn" id="transparencyBtn" title="Toggle Transparency">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+        <path d="M12 2A10 10 0 0 0 12 22A10 10 0 0 0 12 2M12 4A8 8 0 0 1 12 20V4Z"/>
+      </svg>
+    </button>
+
     <!-- Lyrics Toggle Button -->
     <button class="lyrics-btn" id="lyricsBtn" title="Toggle Lyrics">
       <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
@@ -71,6 +78,10 @@
       </div>
       <div class="artist-container">
         <span class="artist" id="songArtist">Please open Spotify</span>
+      </div>
+      <!-- Real-Time Timed Karaoke Lyric Line -->
+      <div class="lyric-line-container" id="lyricLineContainer">
+        <span class="lyric-line" id="lyricLine"></span>
       </div>
     </div>
 

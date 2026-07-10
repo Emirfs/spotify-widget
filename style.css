@@ -109,6 +109,40 @@ body.with-lyrics {
   box-shadow: 0 8px 32px 0 var(--shadow-glow);
 }
 
+/* PURE TRANSPARENT MODE OVERRIDES */
+.widget-container.pure-transparent {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.widget-container.pure-transparent:hover {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Readability shadows applied only in Pure Transparent Mode */
+.widget-container.pure-transparent .title,
+.widget-container.pure-transparent .artist,
+.widget-container.pure-transparent .lyric-line,
+.widget-container.pure-transparent .time-display {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 2px 7px rgba(0, 0, 0, 0.95);
+}
+
+.widget-container.pure-transparent .control-btn,
+.widget-container.pure-transparent .theme-btn,
+.widget-container.pure-transparent .lyrics-btn,
+.widget-container.pure-transparent .transparency-btn,
+.widget-container.pure-transparent .close-btn {
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.85));
+}
+
+.widget-container.pure-transparent .cover-wrapper {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.65);
+}
+
 /* Lyrics Panel Styles */
 .lyrics-panel {
   width: 326px;
@@ -144,6 +178,13 @@ body.with-lyrics .lyrics-panel {
   border-color: var(--border-color);
 }
 
+/* Pure transparent lyrics panel fallback (we keep a subtle dark background for readability) */
+body.with-lyrics .lyrics-panel.pure-transparent {
+  background: rgba(10, 10, 10, 0.35) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: none !important;
+}
+
 .lyrics-title {
   font-size: 9px;
   font-weight: 700;
@@ -162,11 +203,26 @@ body.with-lyrics .lyrics-panel {
   text-align: center;
   overflow-y: auto;
   flex: 1;
-  white-space: pre-line;
   scroll-behavior: smooth;
   padding: 0 4px 8px 4px;
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) transparent;
+}
+
+/* Synced Line Highlighting in Panel */
+.lyrics-content p {
+  margin: 10px 0;
+  opacity: 0.45;
+  transition: opacity 0.35s ease, color 0.3s ease, font-weight 0.3s ease, transform 0.3s ease;
+  font-weight: 400;
+  transform: scale(0.97);
+}
+
+.lyrics-content p.active {
+  opacity: 1;
+  color: var(--accent-color);
+  font-weight: 600;
+  transform: scale(1.04);
 }
 
 /* Custom scrollbar inside lyrics */
@@ -207,7 +263,7 @@ body.with-lyrics .lyrics-panel {
 }
 
 /* Buttons Base */
-.close-btn, .theme-btn, .lyrics-btn {
+.close-btn, .theme-btn, .lyrics-btn, .transparency-btn {
   position: absolute;
   top: 6px;
   background: transparent;
@@ -228,7 +284,8 @@ body.with-lyrics .lyrics-panel {
 
 .widget-container:hover .close-btn,
 .widget-container:hover .theme-btn,
-.widget-container:hover .lyrics-btn {
+.widget-container:hover .lyrics-btn,
+.widget-container:hover .transparency-btn {
   opacity: 1;
 }
 
@@ -245,17 +302,21 @@ body.with-lyrics .lyrics-panel {
   right: 52px;
 }
 
+.transparency-btn {
+  right: 74px;
+}
+
 .close-btn:hover {
   color: #ff5f56;
   background: rgba(255, 95, 86, 0.15);
 }
 
-.theme-btn:hover, .lyrics-btn:hover {
+.theme-btn:hover, .lyrics-btn:hover, .transparency-btn:hover {
   color: var(--text-main);
   background: var(--control-hover-bg);
 }
 
-.lyrics-btn.active {
+.lyrics-btn.active, .transparency-btn.active {
   color: var(--accent-color) !important;
   background: var(--control-hover-bg);
 }
@@ -377,6 +438,32 @@ body.with-lyrics .lyrics-panel {
   transition: color 0.3s ease;
 }
 
+/* Real-Time Timed Karaoke Lyric Line Container */
+.lyric-line-container {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, margin-top 0.3s ease;
+  width: 100%;
+}
+
+.lyric-line-container.active {
+  max-height: 14px;
+  margin-top: 2px;
+}
+
+.lyric-line {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 500;
+  font-style: italic;
+  color: var(--accent-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 1;
+  transition: opacity 0.15s ease, color 0.3s ease;
+}
+
 /* Marquee scrolling */
 .marquee {
   animation: marquee 10s linear infinite;
@@ -490,6 +577,7 @@ body.with-lyrics .lyrics-panel {
 .widget-container.mini-mode .close-btn,
 .widget-container.mini-mode .theme-btn,
 .widget-container.mini-mode .lyrics-btn,
+.widget-container.mini-mode .transparency-btn,
 .widget-container.mini-mode .progress-container,
 .widget-container.mini-mode .time-display {
   opacity: 0 !important;
