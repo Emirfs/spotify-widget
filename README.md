@@ -35,19 +35,44 @@ Masaüstünüzde çalan şarkıyı gösteren, Windows ve Spotify ile tam senkron
 
 Projenin çalıştırılması için bilgisayarınızda **Node.js** veya **Bun** kurulu olmalıdır.
 
-### Adımlar
+### Küresel Kurulum (NPM)
 
-1. Proje dizinine gidin:
-   ```bash
-   cd C:\Users\emir.sari\Desktop\spotify-widget
-   ```
+Uygulamayı doğrudan komut satırından çalıştırmak için küresel olarak yükleyebilirsiniz:
 
-2. Bağımlılıkları yükleyin:
+```bash
+npm install -g spotify-widget
+```
+
+Yükleme tamamlandıktan sonra uygulamayı başlatmak için terminale şu komutu yazmanız yeterlidir:
+
+```bash
+spotify-widget
+```
+
+### Komut Satırı Seçenekleri
+
+Uygulamayı başlatırken görünüm ve ölçek ayarlarını komut satırından geçebilirsiniz:
+
+```bash
+spotify-widget [seçenekler]
+```
+
+**Seçenekler:**
+* `-h, --help`: Yardım menüsünü gösterir.
+* `-m, --mini`: Kompakt (mini) modda başlatır.
+* `-t, --transparent`: Arka planı tamamen görünmez (şeffaf) yapar.
+* `-l, --light`: Aydınlık temayı zorlar.
+* `-d, --dark`: Karanlık temayı zorlar.
+* `-s, --scale <değer>`: Başlangıç ölçeğini ayarlar (örn: `0.8` veya `1.2`).
+
+### Yerel Geliştirme ve Kaynaktan Çalıştırma
+
+1. Proje dizinine gidin ve bağımlılıkları yükleyin:
    ```bash
    npm install
    ```
 
-3. Uygulamayı geliştirici modunda başlatın:
+2. Geliştirici modunda başlatın:
    ```bash
    npm start
    ```

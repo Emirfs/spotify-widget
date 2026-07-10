@@ -1,15 +1,45 @@
 {
   "name": "spotify-widget",
   "version": "1.0.0",
+  "description": "Windows ve Spotify ile tam senkronize çalışan, modern ve minimalist bir Electron widget'ı.",
+  "author": "Emir Furkan Sarı <emirfurkan2955@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "spotify",
+    "widget",
+    "electron",
+    "lyrics",
+    "desktop",
+    "music"
+  ],
   "main": "main.js",
   "scripts": {
     "start": "electron .",
     "package": "electron-builder build --win --x64"
   },
+  "bin": {
+    "spotify-widget": "./bin/cli.js"
+  },
+  "dependencies": {
+  },
+  "peerDependencies": {
+    "electron": "^31.0.0"
+  },
   "devDependencies": {
     "electron": "^31.0.0",
     "electron-builder": "^24.13.3"
   },
+  "files": [
+    "bin",
+    "main.js",
+    "renderer.js",
+    "style.css",
+    "index.html",
+    "icon.png",
+    "spotify-monitor.ps1",
+    "README.md",
+    "package.json"
+  ],
   "build": {
     "appId": "com.spotify.widget",
     "productName": "SpotifyWidget",

@@ -4,6 +4,39 @@ const { spawn, exec } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 
+// Parse CLI arguments
+const startMini = process.argv.includes('--mini') || process.argv.includes('-m');
+const startTransparent = process.argv.includes('--transparent') || process.argv.includes('-t');
+const startLight = process.argv.includes('--light') || process.argv.includes('-l');
+const startDark = process.argv.includes('--dark') || process.argv.includes('-d');
+
+let startScale = null;
+const scaleIndex = process.argv.findIndex(arg => arg === '--scale' || arg === '-s');
+if (scaleIndex !== -1 && scaleIndex + 1 < process.argv.length) {
+  const parsed = parseFloat(process.argv[scaleIndex + 1]);
+  if (!isNaN(parsed)) startScale = parsed;
+}
+
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(`
+Spotify Widget
+Windows ve Spotify ile tam senkronize çalışan modern ve minimalist masaüstü widget'ı.
+
+Kullanım:
+  spotify-widget [seçenekler]
+
+Seçenekler:
+  -h, --help           Yardım menüsünü gösterir.
+  -m, --mini           Widget'ı doğrudan kompakt (mini) modda başlatır.
+  -t, --transparent    Widget'ı doğrudan tam şeffaf modda başlatır.
+  -l, --light          Aydınlık temada başlatır.
+  -d, --dark           Karanlık temada başlatır.
+  -s, --scale <değer>  Widget'ın başlangıç ölçeğini ayarlar (örn: 0.8, 1.2).
+  `);
+  app.quit();
+  process.exit(0);
+}
+
 let mainWindow;
 let monitorProcess;
 let tray = null; // Retain reference to prevent garbage collection
@@ -50,7 +83,14 @@ function createWindow() {
 
   mainWindow.setAspectRatio(baseWidth / baseHeight);
 
-  mainWindow.loadFile('index.html');
+  const queryParams = {};
+  if (startMini) queryParams.mini = 'true';
+  if (startTransparent) queryParams.transparent = 'true';
+  if (startLight) queryParams.theme = 'light';
+  if (startDark) queryParams.theme = 'dark';
+  if (startScale !== null) queryParams.scale = startScale.toString();
+
+  mainWindow.loadFile('index.html', { query: queryParams });
 
   // Capture Renderer Process Console Messages for Debugging
   mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
@@ -188,6 +228,18 @@ function rebuildTrayMenu() {
           checked: currentSettings.lyricsOpen,
           click: () => {
             sendToRenderer('change-lyrics', !currentSettings.lyricsOpen);
+          }
+        },
+        {
+          label: 'Run on Startup',
+          type: 'checkbox',
+          checked: app.getLoginItemSettings().openAtLogin,
+          click: (menuItem) => {
+            app.setLoginItemSettings({
+              openAtLogin: menuItem.checked,
+              path: process.execPath,
+              args: app.isPackaged ? [] : [__dirname]
+            });
           }
         }
       ]

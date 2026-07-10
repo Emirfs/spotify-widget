@@ -90,8 +90,18 @@ window.addEventListener('resize', () => {
   }, 800);
 });
 
+// Parse query parameters for CLI overrides
+const urlParams = new URLSearchParams(window.location.search);
+const forceMini = urlParams.get('mini') === 'true';
+const forceTransparent = urlParams.get('transparent') === 'true';
+const forceTheme = urlParams.get('theme'); // 'light' or 'dark'
+const forceScale = parseFloat(urlParams.get('scale'));
+
 // Load scale on startup
-const savedScale = parseFloat(localStorage.getItem('scale'));
+let savedScale = parseFloat(localStorage.getItem('scale'));
+if (urlParams.has('scale') && !isNaN(forceScale)) {
+  savedScale = forceScale;
+}
 if (!isNaN(savedScale)) {
   document.documentElement.style.setProperty('--scale', savedScale);
   currentScale = savedScale;
@@ -106,10 +116,21 @@ if (!isNaN(savedScale)) {
   }, 50);
 }
 
+if (forceMini) {
+  setTimeout(() => {
+    toggleMiniMode();
+  }, 100);
+}
+
 // 2. Theme Persistence
-const savedTheme = localStorage.getItem('theme');
+let savedTheme = localStorage.getItem('theme');
+if (urlParams.has('theme')) {
+  savedTheme = forceTheme;
+}
 if (savedTheme === 'light') {
   document.body.classList.add('light-theme');
+} else {
+  document.body.classList.remove('light-theme');
 }
 
 themeBtn.addEventListener('click', (e) => {
@@ -121,7 +142,10 @@ themeBtn.addEventListener('click', (e) => {
 
 // 3. Completely Transparent Mode
 let isTransparentMode = false;
-const savedTransparency = localStorage.getItem('transparency') === 'true';
+let savedTransparency = localStorage.getItem('transparency') === 'true';
+if (urlParams.has('transparent')) {
+  savedTransparency = forceTransparent;
+}
 if (savedTransparency) {
   isTransparentMode = true;
   widgetContainer.classList.add('pure-transparent');
@@ -178,11 +202,13 @@ coverWrapper.addEventListener('dblclick', (e) => {
 function setPlaybackState(playing) {
   isPlaying = playing;
   if (playing) {
+    widgetContainer.classList.add('playing');
     playIcon.classList.add('hidden');
     pauseIcon.classList.remove('hidden');
     miniPlayIcon.classList.add('hidden');
     miniPauseIcon.classList.remove('hidden');
   } else {
+    widgetContainer.classList.remove('playing');
     playIcon.classList.remove('hidden');
     pauseIcon.classList.add('hidden');
     miniPlayIcon.classList.remove('hidden');
