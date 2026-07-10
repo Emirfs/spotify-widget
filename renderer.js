@@ -19,28 +19,31 @@ const closeBtn = document.getElementById('closeBtn');
 const themeBtn = document.getElementById('themeBtn');
 const scaleIndicator = document.getElementById('scaleIndicator');
 
+// New DOM Elements (Lyrics & Progress)
+const lyricsPanel = document.getElementById('lyricsPanel');
+const lyricsContent = document.getElementById('lyricsContent');
+const lyricsBtn = document.getElementById('lyricsBtn');
+const progressBar = document.getElementById('progressBar');
+const timeDisplay = document.getElementById('timeDisplay');
+
 let isPlaying = false;
 let isMiniMode = false;
 let currentRawTitle = '';
 const artCache = {}; // Cache to prevent API spamming
 
-// 1. Native Window Resizing Support
+// 1. Sizing and Scaling Logic
 let currentScale = 1.0;
 let scaleTimeout;
 
-// Handle native window resizing (User dragging the borders/corners)
 window.addEventListener('resize', () => {
-  if (isMiniMode) return; // Ignore resizing when in mini-mode
+  if (isMiniMode) return; 
 
-  // Base width is 350px. Scale is calculated proportionally
   const scale = window.innerWidth / 350;
   currentScale = Math.round(scale * 100) / 100;
   
-  // Set CSS property for vectors/fonts to scale cleanly without losing resolution
   document.documentElement.style.setProperty('--scale', currentScale);
   localStorage.setItem('scale', currentScale);
   
-  // Show Scale Indicator feedback
   const percentage = Math.round(currentScale * 100);
   scaleIndicator.textContent = `${percentage}%`;
   scaleIndicator.classList.add('visible');
@@ -48,25 +51,24 @@ window.addEventListener('resize', () => {
   clearTimeout(scaleTimeout);
   scaleTimeout = setTimeout(() => {
     scaleIndicator.classList.remove('visible');
-  }, 800); // Quick fadeout on active resizing
+  }, 800);
 });
 
-// Apply saved scale on startup
+// Load scale on startup
 const savedScale = parseFloat(localStorage.getItem('scale'));
 if (!isNaN(savedScale)) {
   document.documentElement.style.setProperty('--scale', savedScale);
   currentScale = savedScale;
-  // Programmatically set window bounds on start
   setTimeout(() => {
     ipcRenderer.send('set-scale', savedScale);
   }, 50);
 } else {
   setTimeout(() => {
-    ipcRenderer.send('set-scale', 1.0);
-  }, 50);
+    ipcRenderer.send('set-scale', 1.0), 50;
+  });
 }
 
-// 2. Theme Persistence & Application
+// 2. Theme Persistence
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme === 'light') {
   document.body.classList.add('light-theme');
@@ -78,19 +80,19 @@ themeBtn.addEventListener('click', (e) => {
   localStorage.setItem('theme', isLight ? 'light' : 'dark');
 });
 
-// 3. Mini-Mode Toggle Logic (Double-Click)
+// 3. Mini-Mode Toggle
 function toggleMiniMode() {
   isMiniMode = !isMiniMode;
   if (isMiniMode) {
     widgetContainer.classList.add('mini-mode');
+    // Hide lyrics when entering mini-mode
+    if (lyricsOpen) toggleLyricsPanel(false);
   } else {
     widgetContainer.classList.remove('mini-mode');
   }
-  // Disable native resizing during mini-mode to lock the tiny square shape
   ipcRenderer.send('toggle-mini-mode', isMiniMode);
 }
 
-// Double click container (excluding controls) to toggle mini-mode
 widgetContainer.addEventListener('dblclick', (e) => {
   if (e.target.closest('button') || e.target.closest('.controls') || e.target.closest('.cover-overlay')) {
     return;
@@ -98,42 +100,34 @@ widgetContainer.addEventListener('dblclick', (e) => {
   toggleMiniMode();
 });
 
-// Double click cover to toggle mini-mode
 coverWrapper.addEventListener('dblclick', (e) => {
   e.stopPropagation();
   toggleMiniMode();
 });
 
-// 4. Playback State Synchronization (Icons)
+// 4. Playback State Synchronization
 function setPlaybackState(playing) {
   isPlaying = playing;
   if (playing) {
-    // Main button icons
     playIcon.classList.add('hidden');
     pauseIcon.classList.remove('hidden');
-    
-    // Mini overlay icons
     miniPlayIcon.classList.add('hidden');
     miniPauseIcon.classList.remove('hidden');
   } else {
-    // Main button icons
     playIcon.classList.remove('hidden');
     pauseIcon.classList.add('hidden');
-    
-    // Mini overlay icons
     miniPlayIcon.classList.remove('hidden');
     miniPauseIcon.classList.add('hidden');
   }
 }
 
-// 5. Clicking the cover toggles play/pause
 coverWrapper.addEventListener('click', (e) => {
   if (e.detail > 1) return; 
   setPlaybackState(!isPlaying);
   ipcRenderer.send('spotify-control', 'playpause');
 });
 
-// 6. Marquee text scrolling helper
+// 5. Marquee Helper
 function updateTextWithMarquee(element, container, text) {
   element.classList.remove('marquee');
   element.style.animationDuration = '';
@@ -150,8 +144,102 @@ function updateTextWithMarquee(element, container, text) {
   }
 }
 
-// 7. Album Art Fetching Logic (iTunes API + Deezer Fallback)
-async function fetchAlbumArt(artist, song) {
+// 6. Progress Tracking Logic
+let trackDurationMs = 0;
+let currentPositionMs = 0;
+let progressInterval = null;
+
+function formatTime(ms) {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+function updateProgressUI() {
+  if (trackDurationMs > 0) {
+    const percentage = (currentPositionMs / trackDurationMs) * 100;
+    progressBar.style.width = `${percentage}%`;
+    timeDisplay.textContent = `${formatTime(currentPositionMs)} / ${formatTime(trackDurationMs)}`;
+  } else {
+    progressBar.style.width = '0%';
+    timeDisplay.textContent = '0:00 / 0:00';
+  }
+}
+
+function startProgressTimer() {
+  if (progressInterval) clearInterval(progressInterval);
+  progressInterval = setInterval(() => {
+    if (isPlaying && trackDurationMs > 0) {
+      currentPositionMs = Math.min(trackDurationMs, currentPositionMs + 1000);
+      updateProgressUI();
+    }
+  }, 1000);
+}
+
+// 7. Dynamic Color Adaptation (Dominant color extraction)
+albumArt.crossOrigin = "anonymous"; // Enable CORS for canvas reading
+
+albumArt.onload = () => {
+  albumArt.style.opacity = 1;
+  
+  try {
+    const color = getDominantColor(albumArt);
+    if (color) {
+      document.documentElement.style.setProperty('--accent-color', `rgb(${color.r}, ${color.g}, ${color.b})`);
+      document.documentElement.style.setProperty('--shadow-glow', `rgba(${color.r}, ${color.g}, ${color.b}, 0.22)`);
+    } else {
+      resetAccentColor();
+    }
+  } catch (err) {
+    console.warn("Failed to extract color:", err.message);
+    resetAccentColor();
+  }
+};
+
+function getDominantColor(imgEl) {
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 5;
+  canvas.height = 5;
+  
+  try {
+    ctx.drawImage(imgEl, 0, 0, 5, 5);
+    const imgData = ctx.getImageData(0, 0, 5, 5).data;
+    
+    let r = 0, g = 0, b = 0, count = 0;
+    for (let i = 0; i < imgData.length; i += 4) {
+      r += imgData[i];
+      g += imgData[i+1];
+      b += imgData[i+2];
+      count++;
+    }
+    
+    r = Math.round(r / count);
+    g = Math.round(g / count);
+    b = Math.round(b / count);
+    
+    // Boost brightness if extracted color is too dark
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    if (brightness < 40) {
+      r = Math.min(255, r + 60);
+      g = Math.min(255, g + 60);
+      b = Math.min(255, b + 60);
+    }
+    
+    return { r, g, b };
+  } catch (e) {
+    return null;
+  }
+}
+
+function resetAccentColor() {
+  document.documentElement.style.setProperty('--accent-color', '#1DB954');
+  document.documentElement.style.setProperty('--shadow-glow', 'rgba(29, 185, 84, 0.12)');
+}
+
+// 8. Album Art & Duration Fetching Logic (iTunes API + Deezer Fallback)
+async function fetchAlbumArtAndDuration(artist, song) {
   const cacheKey = `${artist.toLowerCase()} - ${song.toLowerCase()}`;
   if (artCache[cacheKey]) {
     return artCache[cacheKey];
@@ -164,9 +252,12 @@ async function fetchAlbumArt(artist, song) {
     const res = await fetch(itunesUrl);
     const data = await res.json();
     if (data.results && data.results.length > 0) {
-      const artUrl = data.results[0].artworkUrl100.replace('100x100bb.jpg', '300x300bb.jpg');
-      artCache[cacheKey] = artUrl;
-      return artUrl;
+      const result = data.results[0];
+      const artUrl = result.artworkUrl100.replace('100x100bb.jpg', '300x300bb.jpg');
+      const durationMs = result.trackTimeMillis;
+      const item = { artUrl, durationMs };
+      artCache[cacheKey] = item;
+      return item;
     }
   } catch (err) {
     console.error("iTunes API error:", err);
@@ -177,9 +268,12 @@ async function fetchAlbumArt(artist, song) {
     const res = await fetch(deezerUrl);
     const data = await res.json();
     if (data.data && data.data.length > 0) {
-      const artUrl = data.data[0].album.cover_medium;
-      artCache[cacheKey] = artUrl;
-      return artUrl;
+      const result = data.data[0];
+      const artUrl = result.album.cover_medium;
+      const durationMs = result.duration * 1000;
+      const item = { artUrl, durationMs };
+      artCache[cacheKey] = item;
+      return item;
     }
   } catch (err) {
     console.error("Deezer API error:", err);
@@ -188,28 +282,85 @@ async function fetchAlbumArt(artist, song) {
   return null;
 }
 
-// Set image source with smooth fade-in
-albumArt.onload = () => {
-  albumArt.style.opacity = 1;
-};
-
-async function updateAlbumArt(artist, song) {
+async function updateTrackMetadata(artist, song) {
   albumArt.style.opacity = 0; 
+  resetAccentColor();
   
   if (!artist || !song) {
     albumArt.src = '';
+    trackDurationMs = 0;
+    currentPositionMs = 0;
+    updateProgressUI();
     return;
   }
 
-  const artUrl = await fetchAlbumArt(artist, song);
-  if (artUrl) {
-    albumArt.src = artUrl;
+  const item = await fetchAlbumArtAndDuration(artist, song);
+  if (item) {
+    albumArt.src = item.artUrl;
+    trackDurationMs = item.durationMs;
+    currentPositionMs = 0;
+    updateProgressUI();
+    startProgressTimer();
   } else {
     albumArt.src = ''; 
+    trackDurationMs = 0;
+    currentPositionMs = 0;
+    updateProgressUI();
   }
 }
 
-// 8. Listen for song updates from the main process
+// 9. Lyrics Panel Logic
+let lyricsOpen = false;
+
+function toggleLyricsPanel(open) {
+  lyricsOpen = open;
+  if (lyricsOpen) {
+    document.body.classList.add('with-lyrics');
+    lyricsBtn.classList.add('active');
+    fetchAndDisplayLyrics();
+  } else {
+    document.body.classList.remove('with-lyrics');
+    lyricsBtn.classList.remove('active');
+  }
+  
+  // Resize Electron window bounds accordingly
+  ipcRenderer.send('set-lyrics-height', { open: lyricsOpen, scale: currentScale });
+}
+
+lyricsBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  toggleLyricsPanel(!lyricsOpen);
+});
+
+async function fetchAndDisplayLyrics() {
+  const titleText = songTitle.textContent || '';
+  const artistText = songArtist.textContent || '';
+  
+  if (titleText === 'Loading...' || titleText === 'Paused' || titleText === 'Not Running' || titleText === 'Spotify is active') {
+    lyricsContent.innerHTML = '<div style="opacity: 0.6; margin-top: 40px;">No music detected.</div>';
+    return;
+  }
+  
+  lyricsContent.innerHTML = '<div style="opacity: 0.6; margin-top: 40px;">Loading lyrics...</div>';
+  
+  try {
+    const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artistText)}/${encodeURIComponent(titleText)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    if (data.lyrics) {
+      lyricsContent.textContent = data.lyrics;
+      lyricsContent.scrollTop = 0; // Reset scroll position to top
+    } else {
+      lyricsContent.innerHTML = '<div style="opacity: 0.6; margin-top: 40px;">Lyrics not found.</div>';
+    }
+  } catch (err) {
+    console.error("Lyrics API fetch error:", err);
+    lyricsContent.innerHTML = '<div style="opacity: 0.6; margin-top: 40px;">Error loading lyrics.</div>';
+  }
+}
+
+// 10. Listen for song updates from the main process
 ipcRenderer.on('spotify-update', async (event, title) => {
   if (title === currentRawTitle) return;
   currentRawTitle = title;
@@ -227,12 +378,12 @@ ipcRenderer.on('spotify-update', async (event, title) => {
     setPlaybackState(false);
     updateTextWithMarquee(songTitle, titleContainer, 'Paused');
     updateTextWithMarquee(songArtist, artistContainer, 'Spotify is active');
-    updateAlbumArt(null, null); 
+    updateTrackMetadata(null, null); 
   } else if (!title || title.trim() === '') {
     setPlaybackState(false);
     updateTextWithMarquee(songTitle, titleContainer, 'Not Running');
     updateTextWithMarquee(songArtist, artistContainer, 'Start Spotify');
-    updateAlbumArt(null, null);
+    updateTrackMetadata(null, null);
   } else {
     setPlaybackState(true);
     
@@ -248,11 +399,17 @@ ipcRenderer.on('spotify-update', async (event, title) => {
     updateTextWithMarquee(songTitle, titleContainer, song);
     updateTextWithMarquee(songArtist, artistContainer, artist);
     
-    updateAlbumArt(artist, song);
+    // Fetch Cover art, Duration & Start Timer
+    await updateTrackMetadata(artist, song);
+
+    // Auto-update lyrics panel if currently visible
+    if (lyricsOpen) {
+      fetchAndDisplayLyrics();
+    }
   }
 });
 
-// 9. Wide controls events
+// 11. Wide controls events
 playPauseBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   setPlaybackState(!isPlaying);

@@ -7,9 +7,22 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Lyrics Panel (sits above widget-container in flex layout) -->
+  <div class="lyrics-panel" id="lyricsPanel">
+    <div class="lyrics-title" id="lyricsTitle">Lyrics</div>
+    <div class="lyrics-content" id="lyricsContent">Lyrics will appear here...</div>
+  </div>
+
   <div class="widget-container" id="widgetContainer">
     <!-- Visual Scale Feedback Overlay -->
     <div class="scale-indicator" id="scaleIndicator">100%</div>
+
+    <!-- Lyrics Toggle Button -->
+    <button class="lyrics-btn" id="lyricsBtn" title="Toggle Lyrics">
+      <svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor">
+        <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/>
+      </svg>
+    </button>
 
     <!-- Theme Toggle Button -->
     <button class="theme-btn" id="themeBtn" title="Toggle Theme">
@@ -84,6 +97,14 @@
         </svg>
       </button>
     </div>
+
+    <!-- Song Progress Bar (bottom-aligned thin stripe) -->
+    <div class="progress-container">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <!-- Time display indicator (bottom-right edge) -->
+    <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
   </div>
 
   <script src="renderer.js"></script>

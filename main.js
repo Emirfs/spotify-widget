@@ -150,7 +150,6 @@ ipcMain.on('set-scale', (event, scale) => {
     const oldBottom = oldBounds.y + oldBounds.height;
     const newY = oldBottom - newHeight;
 
-    // Reset aspect ratio before resizing programmatically to avoid OS locks
     mainWindow.setAspectRatio(0);
     mainWindow.setBounds({
       x: oldBounds.x,
@@ -162,12 +161,46 @@ ipcMain.on('set-scale', (event, scale) => {
   }
 });
 
-// Toggle resizable state based on mini-mode to prevent resizing the tiny vinyl circle
+// Toggle resizable state based on mini-mode
 ipcMain.on('toggle-mini-mode', (event, isMini) => {
   if (mainWindow) {
     mainWindow.setResizable(!isMini);
     if (!isMini) {
       mainWindow.setAspectRatio(350 / 96);
+    }
+  }
+});
+
+// Handle lyrics panel expand / collapse
+ipcMain.on('set-lyrics-height', (event, { open, scale }) => {
+  if (mainWindow) {
+    const baseWidth = 350;
+    const baseHeightNormal = 96;
+    const baseHeightLyrics = 290; // Expanded height
+
+    const oldBounds = mainWindow.getBounds();
+    const newWidth = Math.round(baseWidth * scale);
+    const newHeight = Math.round((open ? baseHeightLyrics : baseHeightNormal) * scale);
+
+    const oldBottom = oldBounds.y + oldBounds.height;
+    const newY = oldBottom - newHeight;
+
+    // Turn off aspect ratio lock during vertical expansion
+    mainWindow.setAspectRatio(0);
+    
+    // Disable drag resizing when lyrics are open to prevent sizing issues
+    mainWindow.setResizable(!open);
+    
+    mainWindow.setBounds({
+      x: oldBounds.x,
+      y: newY,
+      width: newWidth,
+      height: newHeight
+    });
+
+    if (!open) {
+      // Re-enable aspect ratio lock when lyrics are closed
+      mainWindow.setAspectRatio(baseWidth / baseHeightNormal);
     }
   }
 });

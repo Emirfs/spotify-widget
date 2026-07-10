@@ -51,7 +51,7 @@ body {
   
   /* FIXED BASE size for scaling */
   width: 350px;
-  height: 96px;
+  height: 96px; /* Base height */
   
   /* Apply CSS scaling factor dynamically */
   transform: scale(var(--scale, 1));
@@ -59,14 +59,24 @@ body {
   
   /* Allow mouse clicks to pass through empty regions of transparent window */
   pointer-events: none;
+  
+  /* Flex layout to stack lyrics panel directly above the widget container */
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-end;
+  transition: height 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+body.with-lyrics {
+  height: 290px; /* Expanded height to fit 180px lyrics + margins */
 }
 
 /* Glassmorphism widget container */
 .widget-container {
   display: flex;
   align-items: center;
-  width: 326px; /* Base width */
-  height: 80px; /* Base height */
+  width: 326px;
+  height: 80px;
   margin: 8px 12px; /* Center perfectly inside 350x96 window */
   background: var(--bg-color);
   backdrop-filter: blur(32px) saturate(180%);
@@ -99,6 +109,78 @@ body {
   box-shadow: 0 8px 32px 0 var(--shadow-glow);
 }
 
+/* Lyrics Panel Styles */
+.lyrics-panel {
+  width: 326px;
+  height: 180px;
+  margin: 0 12px;
+  background: var(--bg-color);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 12px;
+  box-shadow: 0 8px 32px 0 var(--shadow-color);
+  pointer-events: auto; /* Clickable */
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  transform: translateY(-10px);
+  transition: 
+    opacity 0.4s ease, 
+    max-height 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    margin-bottom 0.4s ease,
+    border-color 0.3s ease;
+}
+
+body.with-lyrics .lyrics-panel {
+  opacity: 1;
+  max-height: 180px;
+  transform: translateY(0);
+  margin-bottom: 6px; /* Space between panel and widget */
+  border-color: var(--border-color);
+}
+
+.lyrics-title {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent-color);
+  margin-bottom: 8px;
+  letter-spacing: 1px;
+  text-align: center;
+  transition: color 0.3s ease;
+}
+
+.lyrics-content {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text-main);
+  text-align: center;
+  overflow-y: auto;
+  flex: 1;
+  white-space: pre-line;
+  scroll-behavior: smooth;
+  padding: 0 4px 8px 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-color) transparent;
+}
+
+/* Custom scrollbar inside lyrics */
+.lyrics-content::-webkit-scrollbar {
+  width: 4px;
+}
+.lyrics-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.lyrics-content::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 4px;
+}
+
 /* Visual Scale Feedback Overlay */
 .scale-indicator {
   position: absolute;
@@ -125,7 +207,7 @@ body {
 }
 
 /* Buttons Base */
-.close-btn, .theme-btn {
+.close-btn, .theme-btn, .lyrics-btn {
   position: absolute;
   top: 6px;
   background: transparent;
@@ -133,7 +215,7 @@ body {
   color: var(--control-color);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+  transition: opacity 0.2s ease, color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
   -webkit-app-region: no-drag;
   z-index: 10;
   width: 20px;
@@ -145,7 +227,8 @@ body {
 }
 
 .widget-container:hover .close-btn,
-.widget-container:hover .theme-btn {
+.widget-container:hover .theme-btn,
+.widget-container:hover .lyrics-btn {
   opacity: 1;
 }
 
@@ -158,13 +241,22 @@ body {
   right: 30px;
 }
 
+.lyrics-btn {
+  right: 52px;
+}
+
 .close-btn:hover {
   color: #ff5f56;
   background: rgba(255, 95, 86, 0.15);
 }
 
-.theme-btn:hover {
+.theme-btn:hover, .lyrics-btn:hover {
   color: var(--text-main);
+  background: var(--control-hover-bg);
+}
+
+.lyrics-btn.active {
+  color: var(--accent-color) !important;
   background: var(--control-hover-bg);
 }
 
@@ -346,6 +438,47 @@ body {
   border-color: var(--accent-color);
 }
 
+/* Song Progress Bar Container */
+.progress-container {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 10;
+  transition: background-color 0.3s ease;
+}
+
+.light-theme .progress-container {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.progress-bar {
+  width: 0%;
+  height: 100%;
+  background: var(--accent-color);
+  /* Smooth horizontal progress transitions */
+  transition: width 0.3s linear, background-color 0.3s ease;
+}
+
+/* Time display layout */
+.time-display {
+  position: absolute;
+  bottom: 6px;
+  right: 16px;
+  font-size: 8px;
+  font-weight: 500;
+  color: var(--text-sub);
+  pointer-events: none;
+  opacity: 0.65;
+  transition: opacity 0.2s ease, color 0.3s ease;
+}
+
 /* MINI-MODE STYLING */
 .widget-container.mini-mode {
   width: 76px;
@@ -355,7 +488,10 @@ body {
 .widget-container.mini-mode .song-info,
 .widget-container.mini-mode .controls,
 .widget-container.mini-mode .close-btn,
-.widget-container.mini-mode .theme-btn {
+.widget-container.mini-mode .theme-btn,
+.widget-container.mini-mode .lyrics-btn,
+.widget-container.mini-mode .progress-container,
+.widget-container.mini-mode .time-display {
   opacity: 0 !important;
   pointer-events: none !important;
 }
