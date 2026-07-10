@@ -17,13 +17,76 @@ const prevBtn = document.getElementById('prevBtn');
 const nextBtn = document.getElementById('nextBtn');
 const closeBtn = document.getElementById('closeBtn');
 const themeBtn = document.getElementById('themeBtn');
+const scaleIndicator = document.getElementById('scaleIndicator');
 
 let isPlaying = false;
 let isMiniMode = false;
 let currentRawTitle = '';
 const artCache = {}; // Cache to prevent API spamming
 
-// 1. Theme Persistence & Application
+// 1. Interactive Scaling Logic (Size adjustments)
+let currentScale = 1.0;
+let scaleTimeout;
+
+function updateScale(scale) {
+  // Bounded scale limits: 0.6x (tiny) to 1.5x (large)
+  currentScale = Math.max(0.6, Math.min(1.5, Math.round(scale * 100) / 100));
+  
+  // Set CSS custom property on root element
+  document.documentElement.style.setProperty('--scale', currentScale);
+  localStorage.setItem('scale', currentScale);
+  
+  // Tell main process to adjust electron window dimensions and coordinates
+  ipcRenderer.send('set-scale', currentScale);
+  
+  // Visual Feedback overlay
+  const percentage = Math.round(currentScale * 100);
+  scaleIndicator.textContent = `${percentage}%`;
+  scaleIndicator.classList.add('visible');
+  
+  clearTimeout(scaleTimeout);
+  scaleTimeout = setTimeout(() => {
+    scaleIndicator.classList.remove('visible');
+  }, 1000);
+}
+
+// Initialize scale from localStorage on load
+const savedScale = parseFloat(localStorage.getItem('scale'));
+if (!isNaN(savedScale)) {
+  // Let the DOM initialize, then update scale
+  setTimeout(() => updateScale(savedScale), 50);
+} else {
+  // Send default scale to main process on start
+  setTimeout(() => ipcRenderer.send('set-scale', 1.0), 50);
+}
+
+// Zoom with Ctrl + Mouse Wheel (or trackpad pinch-to-zoom)
+window.addEventListener('wheel', (e) => {
+  if (e.ctrlKey) {
+    e.preventDefault();
+    const direction = e.deltaY < 0 ? 1 : -1;
+    const step = 0.05;
+    updateScale(currentScale + (direction * step));
+  }
+}, { passive: false });
+
+// Zoom with Ctrl + Keyboards (Ctrl +, Ctrl -, Ctrl 0)
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey) {
+    if (e.key === '=' || e.key === '+') {
+      e.preventDefault();
+      updateScale(currentScale + 0.05);
+    } else if (e.key === '-') {
+      e.preventDefault();
+      updateScale(currentScale - 0.05);
+    } else if (e.key === '0') {
+      e.preventDefault();
+      updateScale(1.0);
+    }
+  }
+});
+
+// 2. Theme Persistence & Application
 const savedTheme = localStorage.getItem('theme');
 if (savedTheme === 'light') {
   document.body.classList.add('light-theme');
@@ -35,7 +98,7 @@ themeBtn.addEventListener('click', (e) => {
   localStorage.setItem('theme', isLight ? 'light' : 'dark');
 });
 
-// 2. Mini-Mode Toggle Logic (Double-Click)
+// 3. Mini-Mode Toggle Logic (Double-Click)
 function toggleMiniMode() {
   isMiniMode = !isMiniMode;
   if (isMiniMode) {
@@ -59,7 +122,7 @@ coverWrapper.addEventListener('dblclick', (e) => {
   toggleMiniMode();
 });
 
-// 3. Playback State Synchronization (Icons)
+// 4. Playback State Synchronization (Icons)
 function setPlaybackState(playing) {
   isPlaying = playing;
   if (playing) {
@@ -81,15 +144,14 @@ function setPlaybackState(playing) {
   }
 }
 
-// 4. Clicking the cover toggles play/pause (convenient in both modes)
+// 5. Clicking the cover toggles play/pause
 coverWrapper.addEventListener('click', (e) => {
-  // Prevent click when double clicking
   if (e.detail > 1) return; 
   setPlaybackState(!isPlaying);
   ipcRenderer.send('spotify-control', 'playpause');
 });
 
-// 5. Marquee text scrolling helper
+// 6. Marquee text scrolling helper
 function updateTextWithMarquee(element, container, text) {
   element.classList.remove('marquee');
   element.style.animationDuration = '';
@@ -106,7 +168,7 @@ function updateTextWithMarquee(element, container, text) {
   }
 }
 
-// 6. Album Art Fetching Logic (iTunes API + Deezer Fallback)
+// 7. Album Art Fetching Logic (iTunes API + Deezer Fallback)
 async function fetchAlbumArt(artist, song) {
   const cacheKey = `${artist.toLowerCase()} - ${song.toLowerCase()}`;
   if (artCache[cacheKey]) {
@@ -115,7 +177,6 @@ async function fetchAlbumArt(artist, song) {
 
   const query = `${artist} ${song}`;
   
-  // Try iTunes API first (Fast, no rate limit, high-res 300x300)
   try {
     const itunesUrl = `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&limit=1&entity=song`;
     const res = await fetch(itunesUrl);
@@ -129,7 +190,6 @@ async function fetchAlbumArt(artist, song) {
     console.error("iTunes API error:", err);
   }
 
-  // Fallback to Deezer API (No auth, good backup)
   try {
     const deezerUrl = `https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=1`;
     const res = await fetch(deezerUrl);
@@ -152,7 +212,7 @@ albumArt.onload = () => {
 };
 
 async function updateAlbumArt(artist, song) {
-  albumArt.style.opacity = 0; // Fade out current art
+  albumArt.style.opacity = 0; 
   
   if (!artist || !song) {
     albumArt.src = '';
@@ -163,11 +223,11 @@ async function updateAlbumArt(artist, song) {
   if (artUrl) {
     albumArt.src = artUrl;
   } else {
-    albumArt.src = ''; // Show placeholder if not found
+    albumArt.src = ''; 
   }
 }
 
-// 7. Listen for song updates from the main process
+// 8. Listen for song updates from the main process
 ipcRenderer.on('spotify-update', async (event, title) => {
   if (title === currentRawTitle) return;
   currentRawTitle = title;
@@ -185,7 +245,7 @@ ipcRenderer.on('spotify-update', async (event, title) => {
     setPlaybackState(false);
     updateTextWithMarquee(songTitle, titleContainer, 'Paused');
     updateTextWithMarquee(songArtist, artistContainer, 'Spotify is active');
-    updateAlbumArt(null, null); // Clear art (shows placeholder)
+    updateAlbumArt(null, null); 
   } else if (!title || title.trim() === '') {
     setPlaybackState(false);
     updateTextWithMarquee(songTitle, titleContainer, 'Not Running');
@@ -206,12 +266,11 @@ ipcRenderer.on('spotify-update', async (event, title) => {
     updateTextWithMarquee(songTitle, titleContainer, song);
     updateTextWithMarquee(songArtist, artistContainer, artist);
     
-    // Fetch and display cover artwork
     updateAlbumArt(artist, song);
   }
 });
 
-// 8. Wide controls events
+// 9. Wide controls events
 playPauseBtn.addEventListener('click', (e) => {
   e.stopPropagation();
   setPlaybackState(!isPlaying);

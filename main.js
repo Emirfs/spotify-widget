@@ -9,16 +9,17 @@ function createWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { x, y, width, height } = primaryDisplay.workArea;
 
-  const windowWidth = 350;
-  const windowHeight = 96;
+  // Base window dimensions
+  const baseWidth = 350;
+  const baseHeight = 96;
 
   // Position at bottom-left corner of the screen, slightly offset
   const posX = x + 24;
-  const posY = y + height - windowHeight - 24;
+  const posY = y + height - baseHeight - 24;
 
   mainWindow = new BrowserWindow({
-    width: windowWidth,
-    height: windowHeight,
+    width: baseWidth,
+    height: baseHeight,
     x: posX,
     y: posY,
     frame: false,
@@ -26,7 +27,7 @@ function createWindow() {
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    hasShadow: false, // Custom CSS shadow is used instead of native boxy window shadow
+    hasShadow: false, 
     show: false,
     webPreferences: {
       nodeIntegration: true,
@@ -38,7 +39,6 @@ function createWindow() {
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();
-    // Strongest level of always-on-top so it stays above full screen apps/games
     mainWindow.setAlwaysOnTop(true, 'screen-saver');
     mainWindow.setVisibleOnAllWorkspaces(true);
     
@@ -112,6 +112,7 @@ function triggerMediaKey(keyCode) {
   });
 }
 
+// IPC Handlers
 ipcMain.on('spotify-control', (event, action) => {
   switch (action) {
     case 'playpause':
@@ -126,6 +127,29 @@ ipcMain.on('spotify-control', (event, action) => {
     case 'close':
       app.quit();
       break;
+  }
+});
+
+// Anchor bottom-left corner when scaling window
+ipcMain.on('set-scale', (event, scale) => {
+  if (mainWindow) {
+    const baseWidth = 350;
+    const baseHeight = 96;
+
+    const oldBounds = mainWindow.getBounds();
+    const newWidth = Math.round(baseWidth * scale);
+    const newHeight = Math.round(baseHeight * scale);
+
+    // Keep the bottom edge anchored at the same screen Y position
+    const oldBottom = oldBounds.y + oldBounds.height;
+    const newY = oldBottom - newHeight;
+
+    mainWindow.setBounds({
+      x: oldBounds.x,
+      y: newY,
+      width: newWidth,
+      height: newHeight
+    });
   }
 });
 
