@@ -24,22 +24,23 @@ let isMiniMode = false;
 let currentRawTitle = '';
 const artCache = {}; // Cache to prevent API spamming
 
-// 1. Interactive Scaling Logic (Size adjustments)
+// 1. Native Window Resizing Support
 let currentScale = 1.0;
 let scaleTimeout;
 
-function updateScale(scale) {
-  // Bounded scale limits: 0.6x (tiny) to 1.5x (large)
-  currentScale = Math.max(0.6, Math.min(1.5, Math.round(scale * 100) / 100));
+// Handle native window resizing (User dragging the borders/corners)
+window.addEventListener('resize', () => {
+  if (isMiniMode) return; // Ignore resizing when in mini-mode
+
+  // Base width is 350px. Scale is calculated proportionally
+  const scale = window.innerWidth / 350;
+  currentScale = Math.round(scale * 100) / 100;
   
-  // Set CSS custom property on root element
+  // Set CSS property for vectors/fonts to scale cleanly without losing resolution
   document.documentElement.style.setProperty('--scale', currentScale);
   localStorage.setItem('scale', currentScale);
   
-  // Tell main process to adjust electron window dimensions and coordinates
-  ipcRenderer.send('set-scale', currentScale);
-  
-  // Visual Feedback overlay
+  // Show Scale Indicator feedback
   const percentage = Math.round(currentScale * 100);
   scaleIndicator.textContent = `${percentage}%`;
   scaleIndicator.classList.add('visible');
@@ -47,44 +48,23 @@ function updateScale(scale) {
   clearTimeout(scaleTimeout);
   scaleTimeout = setTimeout(() => {
     scaleIndicator.classList.remove('visible');
-  }, 1000);
-}
+  }, 800); // Quick fadeout on active resizing
+});
 
-// Initialize scale from localStorage on load
+// Apply saved scale on startup
 const savedScale = parseFloat(localStorage.getItem('scale'));
 if (!isNaN(savedScale)) {
-  // Let the DOM initialize, then update scale
-  setTimeout(() => updateScale(savedScale), 50);
+  document.documentElement.style.setProperty('--scale', savedScale);
+  currentScale = savedScale;
+  // Programmatically set window bounds on start
+  setTimeout(() => {
+    ipcRenderer.send('set-scale', savedScale);
+  }, 50);
 } else {
-  // Send default scale to main process on start
-  setTimeout(() => ipcRenderer.send('set-scale', 1.0), 50);
+  setTimeout(() => {
+    ipcRenderer.send('set-scale', 1.0);
+  }, 50);
 }
-
-// Zoom with Ctrl + Mouse Wheel (or trackpad pinch-to-zoom)
-window.addEventListener('wheel', (e) => {
-  if (e.ctrlKey) {
-    e.preventDefault();
-    const direction = e.deltaY < 0 ? 1 : -1;
-    const step = 0.05;
-    updateScale(currentScale + (direction * step));
-  }
-}, { passive: false });
-
-// Zoom with Ctrl + Keyboards (Ctrl +, Ctrl -, Ctrl 0)
-window.addEventListener('keydown', (e) => {
-  if (e.ctrlKey) {
-    if (e.key === '=' || e.key === '+') {
-      e.preventDefault();
-      updateScale(currentScale + 0.05);
-    } else if (e.key === '-') {
-      e.preventDefault();
-      updateScale(currentScale - 0.05);
-    } else if (e.key === '0') {
-      e.preventDefault();
-      updateScale(1.0);
-    }
-  }
-});
 
 // 2. Theme Persistence & Application
 const savedTheme = localStorage.getItem('theme');
@@ -106,6 +86,8 @@ function toggleMiniMode() {
   } else {
     widgetContainer.classList.remove('mini-mode');
   }
+  // Disable native resizing during mini-mode to lock the tiny square shape
+  ipcRenderer.send('toggle-mini-mode', isMiniMode);
 }
 
 // Double click container (excluding controls) to toggle mini-mode

@@ -26,14 +26,21 @@ function createWindow() {
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
-    hasShadow: false, 
+    resizable: true, // Enable native window resizing
+    minWidth: 210,   // 0.6x min scale
+    minHeight: 58,
+    maxWidth: 560,   // 1.6x max scale
+    maxHeight: 154,
+    hasShadow: false,
     show: false,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
     }
   });
+
+  // Enforce aspect ratio on resize (350:96)
+  mainWindow.setAspectRatio(baseWidth / baseHeight);
 
   mainWindow.loadFile('index.html');
 
@@ -130,7 +137,7 @@ ipcMain.on('spotify-control', (event, action) => {
   }
 });
 
-// Anchor bottom-left corner when scaling window
+// Set scale initially (on startup)
 ipcMain.on('set-scale', (event, scale) => {
   if (mainWindow) {
     const baseWidth = 350;
@@ -140,16 +147,28 @@ ipcMain.on('set-scale', (event, scale) => {
     const newWidth = Math.round(baseWidth * scale);
     const newHeight = Math.round(baseHeight * scale);
 
-    // Keep the bottom edge anchored at the same screen Y position
     const oldBottom = oldBounds.y + oldBounds.height;
     const newY = oldBottom - newHeight;
 
+    // Reset aspect ratio before resizing programmatically to avoid OS locks
+    mainWindow.setAspectRatio(0);
     mainWindow.setBounds({
       x: oldBounds.x,
       y: newY,
       width: newWidth,
       height: newHeight
     });
+    mainWindow.setAspectRatio(baseWidth / baseHeight);
+  }
+});
+
+// Toggle resizable state based on mini-mode to prevent resizing the tiny vinyl circle
+ipcMain.on('toggle-mini-mode', (event, isMini) => {
+  if (mainWindow) {
+    mainWindow.setResizable(!isMini);
+    if (!isMini) {
+      mainWindow.setAspectRatio(350 / 96);
+    }
   }
 });
 
