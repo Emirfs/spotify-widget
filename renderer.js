@@ -410,7 +410,7 @@ async function fetchTrackData(artist, song) {
 
   const item = {
     artUrl: artworkData ? artworkData.artUrl : '',
-    durationMs: artworkData ? artworkData.durationMs : 0,
+    durationMs: artworkData && artworkData.durationMs ? artworkData.durationMs : (lyricsData && lyricsData.duration ? lyricsData.duration * 1000 : 0),
     syncedLyrics: lyricsData ? lyricsData.syncedLyrics : '',
     plainLyrics: lyricsData ? lyricsData.plainLyrics : ''
   };
@@ -458,13 +458,14 @@ async function fetchLyricsFromLRCLIB(artist, song) {
   const { cleanArtist, cleanSong } = cleanSongAndArtist(artist, song);
   
   try {
-    const url = `https://lrclib.net/api/get?artist=${encodeURIComponent(cleanArtist)}&track=${encodeURIComponent(cleanSong)}`;
+    const url = `https://lrclib.net/api/get?artist_name=${encodeURIComponent(cleanArtist)}&track_name=${encodeURIComponent(cleanSong)}`;
     const res = await fetch(url);
     if (res.ok) {
       const data = await res.json();
       return {
         syncedLyrics: data.syncedLyrics || '',
-        plainLyrics: data.plainLyrics || ''
+        plainLyrics: data.plainLyrics || '',
+        duration: data.duration || 0
       };
     }
   } catch (err) {
