@@ -4,3 +4,7 @@ package-lock.json
 .DS_Store
 *.log
 *.tgz
+desktop.ini
+Thumbs.db
+.tmp.driveupload/
+.tmp.drivedownload/
