@@ -12,7 +12,7 @@ Canli dosya: <DOLDURULACAK>
 Nerede kaldik: <DOLDURULACAK>
 Siradaki: - [ ] <DOLDURULACAK>
 
-Dal: `main`. Son commit 2026-09-03 (gitignore duzeni).
+Dal: `main`. Son commit tarihi icin `git log -1`.
 
 ## Calistirma
 | Komut | Ne yapar |
@@ -35,8 +35,8 @@ Dal: `main`. Son commit 2026-09-03 (gitignore duzeni).
 | `AGENTS.md` / `CLAUDE.md` | Depo calisma kurallari |
 
 ## Ozellikler
-Buzlu cam (glassmorphism) tasarim; fare tekerlegi veya kenardan cekmeyle
-%60-%150 olcekleme; senkron veya duz metin sozler paneli; tam seffaflik modu;
+Buzlu cam (glassmorphism) tasarim; kenardan cekerek en-boy oranini koruyan
+boyutlandirma, tepsi menusunden olcek secimi; senkron veya duz metin sozler paneli; tam seffaflik modu;
 sistem temasina uyan karanlik/aydinlik tema; sistem tepsisi menusu; medya
 denetimleri ve ilerleme takibi.
 
