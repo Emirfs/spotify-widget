@@ -19,7 +19,7 @@ Masaüstünüzde çalan şarkıyı gösteren, Windows ve Spotify ile tam senkron
 ## Özellikler
 
 * **Buzlu Cam (Glassmorphism) Tasarımı**: Arka plan bulanıklığı ve yarı şeffaflık ile masaüstünüzle bütünleşen arayüz.
-* **Dinamik Boyutlandırma ve Ölçekleme**: Arayüzü fare tekerleğiyle veya kenarlarından çekerek %60 ile %150 arasında ölçeklendirebilme.
+* **Dinamik Boyutlandırma ve Ölçekleme**: Arayüzü kenarlarından çekerek en-boy oranını koruyarak boyutlandırma; ölçeği tepsi menüsünden veya `--scale` ile seçme. (Fare tekerleğiyle ölçekleme kaldırıldı.)
 * **Dinamik Söz (Lyrics) Paneli**: Şarkıyla senkronize kayan sözleri veya düz metin sözlerini görüntüleme paneli.
 * **Tam Şeffaflık Modu**: Widget arka planını ve çerçevesini tamamen gizleyerek sadece albüm kapağını, şarkı adını ve kontrolleri masaüstünde yüzer halde bırakma seçeneği.
 * **Tema Desteği**: Sistem tercihlerine veya manuel seçime göre anında değişebilen Karanlık ve Aydınlık tema yapıları.
